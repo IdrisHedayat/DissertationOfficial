@@ -1,0 +1,107 @@
+---
+title: "Modelling Research"
+author: "Idris Hedayat"
+date: '2023-02-13'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("dplyr")
+```
+
+## Hierachical modelling
+
+what is it?
+
+synopsis of hierachical modelling;
+
+
+
+- statistical approach for analysing data from a variety of sources, levels, and stypes, involivng the "hierachical" structure of nodes or "layers" at different levels, consisting of a set of parameters describing the distribution of data at that level, the parameters are then used to calculate the distribution of the data at each level, so that the parameters of regressions at the bottom being controlled by the hyperparameters of the upper-level model.
+
+- In general, multilevel / hierachical models are considered as regressions where the parameters for example; regression coefficients, are given probability models, 
+
+- multilevel models are also often known as random effect / mixed effect models where the regression coefficients are modelled and estimated as the random effects, considered random outcomes of the modelling process predicting them. Fixed effects do not vary or corrospond to paramteers that may vary but arent necessarily modeled directly themselve, and mixed-effect models inlucde both type of effects.
+
+Bayesian implentation of hierachical modelling:
+
+unlike frequentist statistics, bayesian treatment of the parameter is of random vairables and the subjective informaiton in establishing assumptions on the parameters and their distriubtions.
+
+
+
+From Baio 2010:
+We propose in this paper a Bayesian herarchical model for the number of
+goals scored by the two teams in each match. Hierarchical models are widely
+used in many different fields as they are a natural way of taking into account
+relations between variables, by assuming a common distribution for a set of
+relevant parameters, thought to underlay the outcomes of interest (Congdon
+2003).
+Within the Bayesian framework, which naturally accommodates hierarchical
+models (Bernardo & Smith 1999), there is no need of the bivariate Poisson
+modelling. We show here that assuming two conditionally independent Poisson
+variables for the number of goals scored, correlation is taken into account, since
+the observable variables are mixed at an upper level. Moreover, as we are framed
+in a Bayesian context, prediction of a new game under the model is naturally
+accommodated by means the posterior predictive distribution
+ 
+
+
+ 
+ 
+
+- simplest case of multilevel modelling: nested linear models, 
+ - concepts covered and included here: partial pooling, variance components, prior distributions, identifiability, intrepretation of regression coefficients at different levels of hierachy (hence the hierachichal component)
+
+
+
+
+considering for our model: 
+
+ - Bayesian Framework naturally acommodates hierachical models (Bernardo and Smith 1999), 
+ 
+ - in bayesian context, prediction of a new game under the model is naturally accomodated by means the posterior predictive distribution
+ 
+ 
+
+Introducing our data:
+Data collected from <www.football-data.co.uk>, football results and odds databases commonly used as betting portal, providing historical results for the many european leagues, and of course the main 5 of interest: England, Italy, Spain, France, Germany. Data provided on the database through computer-ready CSV files, with ddata available all the way back to. 1993/94, however we will mainly consider data from 2000/01 since these files contain additional, more complex match statistics including shots on goal, corners, fouls, offsides, bookings.
+
+```{r data read}
+prem2122 <- read.csv("Prem2122.csv")
+
+
+
+### This approach isn't needed
+HAtrans <- function(df){
+  h <- df[,c(2:24)] 
+  h$Home <- rep(c(1),times=nrow(h))
+  h <- h %>%
+    rename("Team" = "HomeTeam", 
+         "Opponent" = "AwayTeam") 
+  
+
+  a <- df[,c(2:24)] 
+  a$Home <- rep(c(0),times=nrow(a))
+  a <- a %>%
+    rename("Team" = "AwayTeam", 
+         "Opponent" = "HomeTeam") 
+  
+  ha = rbind(h,a)
+  
+  return(ha)
+}
+
+
+prem2122ha <- HAtrans(prem2122)
+
+#data frame created above creates 2 entries per match, as we have included a new $Home varioable (1,0), so we can replace hometeam and awayteam column with team and opponent.
+
+```
+
+
+
+```{r pressure, echo=FALSE}
+
+```
+

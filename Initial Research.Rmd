@@ -1,0 +1,161 @@
+---
+title: "STAT0036 Research"
+author: "Idris Hedayat"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+
+```
+
+Title: Who would win the national title of the big 12 escaped into the Europa Super League. 
+Sources:
+
+sources i found myself:
+The 2021 European Super League attempt: motivation, outcome, and the future of football
+https://www.tandfonline.com/doi/abs/10.1080/19406940.2021.2013926
+
+
+
+
+CGPT Finds:
+
+Papers to look at:
+"The economic impact of a European Super League" by Simon Chadwick, published in the International Journal of Sport Management and Marketing.
+
+"The potential impact of a European Super League on domestic football" by David Forrest and Paul Downward, published in the Journal of Sports Economics.
+
+"The formation of a European Super League: implications for the sport of football" by Stefan Szymanski and Andrew Zimbalist, published in the Journal of Sports Management.
+
+"The impact of a European Super League on the football industry" by Paul M. Dowling and David Forrest, published in the Journal of Sports Economics.
+
+"The creation of a European Super League: a strategic analysis" by Mark Conrad, published in the Journal of Sport Business.
+
+"The economic and strategic implications of a European Super League" by John R. Goddard, published in the Journal of Sports Economics.
+
+"The European Super League: a legal and economic analysis" by Stefan Késenne, published in the Journal of Sports Law and Policy.
+
+"A European Super League: a critical analysis" by Stefan Késenne, published in the Journal of Sports Economics.
+
+
+Papers to do with statistcs:
+A statistical analysis of a proposed European Super League" by David J. Berri and Martin Schmidt, published in the Journal of Quantitative Analysis in Sports.
+
+"The performance of teams in a European Super League: a statistical analysis" by Stefan Szymanski and Andrew Zimbalist, published in the Journal of Sports Economics.
+
+"Predicting the success of teams in a European Super League using statistical models" by David Forrest and Paul Downward, published in the Journal of Sports Economics.
+
+"The impact of a European Super League on team performance: a statistical analysis" by Mark Conrad, published in the Journal of Sport Business.
+
+"A statistical comparison of team performance in domestic and European competitions" by John R. Goddard, published in the Journal of Sports Economics.
+
+"A statistical analysis of the economic impact of a European Super League" by Stefan Késenne, published in the Journal of Sports Economics.
+
+"Statistical analysis of the competitive balance of a European Super League" by Simon Chadwick, published in the International Journal of Sport Management and Marketing.
+
+"Predicting the outcome of matches in a European Super League using statistical models" by Paul M. Dowling and David Forrest, published in the Journal of Sports Economics.
+
+Description: 
+Earlier in 2021, a group of major European football club have attempted a coup to establish a new international competition in which they would have participated permanently. The European football association (UEFA) threatened to exclude them from the national championships, had they gone on with their plan. The aim of this project is to estimate the performance of European teams in their respective national championships and then to estimate the results in a hypothetical scenario in which the 12 clubs have been excluded from participation".
+
+Aim 1: Estimate results in the respective domestic league with the clubs
+
+Aim 2: estimate without the clubs
+
+(potential further aim: estimate the hypothetical super league results themselves)
+
+
+Things to research: 
+
+What is the super league?, the clubs involved? UEFA? 
+
+
+
+Why is this important? 
+
+- Economic impact?
+ - Performance in domestic leagues or the super league would be of interest to the sports organisations themselves, as billion dollar valued clubs rely on maintaining performance and trophy successes to grow  and maintain their international brand image.
+ - increased revenue to the clubs (same point as above really)
+ - increased competition fo sponsership
+ - 
+ - betting industry: the influence of a super league would
+add another dimension to the betting world
+ - potential negative impact on the rest of the teams as a whole
+ 
+ 
+- Social Impact?:
+ - culture of watching sports changes as a whole:
+ - disruption of the structure of world football as a whole
+ - impacts are exagerrated as a whole since billions of people around the world watch the sport (refer to worldwide viewers of competitions such as the UEFA UCL)
+
+
+- Sports analytics
+
+
+
+
+what are the aims? 
+
+
+Data? What, where to get, how to use?
+
+Dataset: 
+
+https://www.kaggle.com/datasets/saife245/english-premier-league 
+(source for premier league)
+
+https://www.football-data.co.uk/. 
+(this source looks particularly useful for every league)
+
+ - Contextual Factors to consider: current form and strength of the teams, their familiarity with the European playing style, and the level of competition they would be facing ( but how do we measure these?)
+ - factors such as injures to big players contributing across a season may not be able to be measured from data
+- contextual factors cont: Additionally, the performance of European teams in their respective national championships may not necessarily translate to success in a different league or competition
+
+- potential covariates to consider:
+
+Methods?: Bayesian modelling? - what else could we try?
+ - just initial ideas and propositions:
+
+- Look at la liga modelling:
+
+https://github.com/xzhangfox/Football-Prediction-by-Bayesian-Method/blob/master/Code/Final%20Project%20Team%202%20-%20Approach%202.R
+
+
+```{r }
+
+```
+
+
+```{r , echo=FALSE}
+```{r data read}
+prem2122 <- read.csv("Prem2122.csv")
+
+
+
+### This approach isn't needed
+HAtrans <- function(df){
+  h <- df[,c(2:24)] 
+  h$Home <- rep(c(1),times=nrow(h))
+  h <- h %>%
+    rename("Team" = "HomeTeam", 
+         "Opponent" = "AwayTeam") 
+  
+
+  a <- df[,c(2:24)] 
+  a$Home <- rep(c(0),times=nrow(a))
+  a <- a %>%
+    rename("Team" = "AwayTeam", 
+         "Opponent" = "HomeTeam") 
+  
+  ha = rbind(h,a)
+  
+  return(ha)
+}
+
+
+prem2122ha <- HAtrans(prem2122)
+
+#data frame created above creates 2 entries per match, as we have included a new $Home varioable (1,0), so we can replace hometeam and awayteam column with team and opponent.
+
+```
+```

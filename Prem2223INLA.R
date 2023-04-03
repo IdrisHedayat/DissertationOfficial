@@ -1,6 +1,6 @@
 library(INLA)
 library(tidyverse)
-
+library(readxl)
 
 # This file is used if we are using the fixture list updated for double game weeks (i.e postponed games)
 prem2223 <- read_excel("fbref2223dgw.xlsx")
@@ -167,19 +167,17 @@ premfootie=premfootie  %>%
 formula = as.numeric(Goal) ~ Home + diff_point + days_since_last + diff_rank + form + #removing the following variables from the formuka to make it easier to run initially (idris) + form + diff_point + diff_rank + days_since_last + as.factor(tournament) +
   #  as.factor(confederation) +
   f(factor(Team), model = "iid") +     # f() is used to define General Gasuain Model in INLA formula
-  f(factor(Opponent), model = "iid") 
+  f(factor(Opponent), model = "iid")  + 
 # Time component wek by team to account for difference in time performance
 # f(id_date,model="rw2",replicate=as.numeric(factor(Team)))
 #+
 # Overdispersion to account for extra goals
-#f(num,model="iid")
+ f(num,model="iid")
 # Model for Round r
-# r=1  done
-# r=2 done 
-# r=3 done
-# r=4 done
-# r=5 done
-r=38
+
+
+# given that the data use is up to round r, we use 
+r = 28
 data=
   # Here "fixes" the data
   premfootie %>% 
@@ -263,12 +261,12 @@ make_scored=function(round,model,nsims=1000) {
   r=round
   m=model
   # Then selects the relevant indices
-  idx=(data %>% # mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>% 
+  idx=(data %>%  mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>% 
          filter(Round.Number%in%c(NA,r))) %>% mutate(num=row_number()) %>% filter(Round.Number==r) %>% pull(num)
   jpost=inla.posterior.sample(n=nsims,m)
   topredict=tail(grep("Predictor",rownames(jpost[[1]]$latent)),length(idx))
   theta.pred=matrix(exp(unlist(lapply(jpost,function(x) x$latent[idx,]))),ncol=length(idx),byrow=T) 
-  colnames(theta.pred)= (data %>% # mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>%
+  colnames(theta.pred)= (data %>%  mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>%
                            filter(Round.Number%in%c(NA,r))) %>% mutate(num=row_number()) %>% filter(Round.Number==r) %>% pull(Team)
   theta.pred=theta.pred %>% as_tibble()
   # Predictions from the posterior distribution for the number of goals scored
@@ -390,7 +388,14 @@ joint_marginal=function(x,y,scored,result=NULL,...) {
 
 
 
-#### This is where im having trouble running the simpler model
+#### running some utility functions
+
+attack_defense(m) #plot of the attack and defense effects
+
+
+#plotting the respective attack and defending effects seperately i.e ability to defend (concede less), or attack more (more goals)
+team_strength(m, "attack")
+team_strength(m, "defense")
 
 
 
@@ -415,11 +420,88 @@ joint_marginal=function(x,y,scored,result=NULL,...) {
 
 set.seed(2223)
 
-premtest <- make_scored(38,m,nsims=1000)
-joint_marginal("Manchester City", "Arsenal", premtest)
+premtest <- make_scored(28,m,nsims=10000)
+joint_marginal("Liverpool", "Fulham", premtest)  # Draw 1-1
+joint_marginal("Manchester Utd", "Brighton", premtest)  #draw 1-1
+joint_marginal("Manchester City", "West Ham", premtest) # draw 1-1
 
 
 
 
 # now i need to make a way to update the table efficiently ?
 # perhaps make a function that will extract the most likely outcome
+
+# #round 28 unplayed games:
+# 
+# gw28u <- premfootie %>% filter(is.na(Goal) & Round.Number == 28)
+
+
+
+
+# #testing out if extraction of joint marginal results is correct
+# e2clubs <- function(scored,team,opp) {
+#   extracteddata = scored %>% with(table(.[[team]],.[[opp]])) %>% prop.table() %>% 
+#     as_tibble(.name_repair = ~vctrs::vec_as_names(c(team,opp,"n"),quiet=TRUE)) %>% 
+#     mutate(across(where(is.character),as.numeric))
+#   
+#   return(extracteddata)
+#   
+# }
+# 
+# 
+# livful <- e2clubs(premtest,"Liverpool","Fulham")
+# briman <- e2clubs(premtest,"Brighton","Manchester Utd")
+# wesman <- e2clubs(premtest,"West Ham","Manchester City")
+
+
+
+
+
+library(dplyr)
+
+# Replace N with the desired round number
+gw28u <- premfootie %>% filter(is.na(Goal) & Round.Number == 28)
+
+# Loop through each row in gwNu
+
+
+updated_unplayed = function(N) {
+
+  gwNu <- premfootie %>% filter(is.na(Goal) & Round.Number == N)  
+    
+  for(i in 1:nrow(gwNu)) {
+    # Extract the home and away teams for the i-th row
+    team <- gwNu$Team[i]
+    opp <- gwNu$Opponent[i]
+  
+    
+    extractdata = premtest %>% with(table(.[[team]],.[[opp]])) %>% prop.table() %>% 
+      as_tibble(.name_repair = ~vctrs::vec_as_names(c(team,opp,"n"),quiet=TRUE)) %>% 
+      mutate(across(where(is.character),as.numeric))
+    
+    max_row_index <- which.max(extractdata$n)
+    max_row <- extractdata[max_row_index, ]
+    
+    # Extract the predicted goals for the home and away teams from the most likely result "max_row"
+    team_goals <- max_row[1]
+    # away_goals <- max_row[2] turns out this not needed since we are doing specific team rows in order
+    
+    gwNu$Goal[i] <- team_goals
+  
+  }
+
+  return(gwNu)
+}
+
+
+gw28U <- updated_unplayed(28)
+
+# # Below did not work at all
+
+# premfootie <- premfootie %>%
+#   left_join(gw28U %>% select(ID_game, Goal), by = "ID_game") %>%
+#   mutate(Goal = ifelse(is.na(Goal.y), Goal.x, Goal.y)) %>%
+#   select(-Goal.x, -Goal.y)
+
+
+

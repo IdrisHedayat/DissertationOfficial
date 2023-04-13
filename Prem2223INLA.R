@@ -3,7 +3,7 @@ library(tidyverse)
 library(readxl)
 
 # This file is used if we are using the fixture list updated for double game weeks (i.e postponed games)
-prem2223 <- read_excel("fbref2223.xlsx")
+prem2223 = read_excel("fbref2223r44.xlsx")
 
 # #file with unadjusted gw column.
 # prem2223 <- read_excel("fbref2223.xlsx")
@@ -16,11 +16,12 @@ prem2223 <- prem2223[, !(names(prem2223) %in% c("Time", "Attendance", "Referee",
 premsched <- as_tibble(prem2223) %>% 
   rename(
     Location = Venue
-    
   ) %>% 
   mutate(
     Date=as.Date(Date, format = "%d/%m/%Y"),
     tournament="Premier League",
+    HG = as.numeric(HG),
+    AG = as.numeric(AG),
     ID_game=row_number(),
     Location=case_when(
       Location=="Selhurst Park" ~ "Crystal Palace",
@@ -153,8 +154,9 @@ premfootie <- premfootie %>%
          Gpg = total_G / game_number,) %>% ungroup()  %>% 
   group_by(ID_game) %>% mutate(ID=cur_group_id()) %>% ungroup() 
 
+###### There is a problem with calculating rank here, it doesnt accurately monitor league position at the time, perhaps consider an ELO ranking instead ############
+# Calculate rank for each given round.  
 
-# Calculate rank for each given round
 premfootie = premfootie %>%
   group_by(Round.Number) %>%
   mutate(rank = dense_rank(desc(total_points))) %>%
@@ -167,7 +169,7 @@ premfootie = premfootie %>%
 
 
 
-saveRDS(premfootie,"IdrisPrem2223.rds")
+saveRDS(premfootie,"IdrisPremfootie2223.rds")
 
 
 
@@ -176,28 +178,45 @@ saveRDS(premfootie,"IdrisPrem2223.rds")
 # I think the main issue might just be the fact that results such as "total points" should be shifted down 1 round later, i.e the total points theyre on at the time of that game
 
 
-######
+
+
+
+########## Formula  #########
+
 
 
 
 # ANOVA-like model
-formula = as.numeric(Goal) ~ Home + diff_point + diff_rank + form + #removing the following variables from the formuka to make it easier to run initially (idris) + form + diff_point + diff_rank + days_since_last + as.factor(tournament) +
-  # days_since_last +
-  Gpg +
-  GCpg +
+
+formula = Goal ~ Home + 
+  # diff_point +
+  # diff_rank +
+  # form +
   rel_strength +
+  days_since_last +
+  Gpg +
+  # GCpg +
+  GDdiff + 
   f(factor(Team), model = "iid") +     # f() is used to define General Gasuain Model in INLA formula
-  f(factor(Opponent), model = "iid") +
+  f(factor(Opponent), model = "iid") # +
 # Time component wek by team to account for difference in time performance
   # f(id_date,model="rw2",replicate=as.numeric(factor(Team))) +
 # Overdispersion to account for extra goals
-  f(num,model="iid")
+  # f(num,model="iid") +
+# seeing if   f(factor(Location), model = "iid") + impacts
+# f(factor(Location), model = "iid") 
+
+
+
+
+##########  Prepping Premfootie -> Data #########
+
 # Model for Round r
 
 
 # given that the data use is up to round r, we use 
 
-r=19
+r=28
 data=
   # Here "fixes" the data
   premfootie %>% 
@@ -212,12 +231,44 @@ data=
   ) %>% 
   # Then filters only the games in a given round (for prediction)
   filter(Round.Number%in%c(NA,1:r)) # Here I have changed the code to 1:r to ensure it keeps the updated data too
+
+
+
+########## INLA Model #########
 m=inla(formula,
        data=data,
        family="poisson",
        control.predictor=list(compute=TRUE,link=1),
        control.compute=list(config=TRUE,dic=TRUE))
 summary(m)
+
+
+runINLA <- function(dat){
+  inmod=inla(formula,
+         data=dat,
+         family="poisson",
+         control.predictor=list(compute=TRUE,link=1),
+         control.compute=list(config=TRUE,dic=TRUE))
+  return(inmod)
+}
+
+
+########## Source Utility Functions ########
+
+source("UtilityFunctions.R")
+#above sources the following functions: 
+# time_trend() , "for the RW2 model of over time performance" - doesnt work when i try to run anyways
+# attack_defense() , plot of attack_defence effects
+# team_strength() , shows attack or defence effets of each team depending on what is specified
+# make_scored() ,   Post-processing Used to predict the number of goals scored in.a new game
+# plot_joint() ,  # Plots the joint posterior distributions of all the possible scores
+# outcome_predict() , gives win % predictions for each team specified 
+# joint_marginal() ,  gives the plot of the joint posterior probabilities for specified teams
+# updated_unplayed() ,  extracts the unplayed fixtures for a given round and inputs the most common result ( i think this should instead be inputting just the sample mean of the column of goals scored for the team rounded?)
+# update_footie() , updates the premfootie dataset with the goal predictions
+# var_updater() ,  updates the other variables in the dataset as a result of the goal predictions
+# roundN , does the above 3 for a given round N , e.g round 24
+# datprep() , preps the data as it should be before being using in the inla model
 
 
 # For the RW2 by team model
@@ -405,9 +456,6 @@ joint_marginal=function(x,y,scored,result=NULL,...) {
   gridExtra::grid.arrange(hist_top, empty, center, hist_side, ncol=2, nrow=2, widths=c(4, 1), heights=c(1, 4))
 }
 
-
-
-
 #### running some utility functions
 
 attack_defense(m) #plot of the attack and defense effects
@@ -420,17 +468,6 @@ team_strength(m, "defense")
 
 
 
-
-# # All plots in a single grob
-# library(gridExtra)
-# h=seq(1,ncol(scored),by=2)
-# a=seq(2,ncol(scored),by=2)
-# allplot=lapply(
-#   1:length(h),function(x) 
-#     joint_marginal(names(scored)[h[x]],names(scored)[a[x]],scored,max_goal=6,annotate_size=3.2,title="")
-# )
-# 
-# 
 
 
 
@@ -445,15 +482,6 @@ set.seed(2223)
 # joint_marginal("Manchester Utd", "Brighton", premtest)  #draw 1-1
 # joint_marginal("Manchester City", "West Ham", premtest) # draw 1-1
 
-
-
-
-# now i need to make a way to update the table efficiently ?
-# perhaps make a function that will extract the most likely outcome
-
-# #round 28 unplayed games:
-# 
-# gw28u <- premfootie %>% filter(is.na(Goal) & Round.Number == 28)
 
 
 
@@ -478,69 +506,99 @@ set.seed(2223)
 
 
 
+########## Post Processing  #########
 
 # # Replace N with the desired round number
-# gw28u <- premfootie %>% filter(is.na(Goal) & Round.Number == 28)
 
 # Loop through each row in gwNu
 
 
-updated_unplayed = function(N, scored) {
+#for r=28
+# r28 = make_scored(28,m,nsims=10000)
+# gw28u = premfootie %>% filter(is.na(Goal & Round.Number == 28))
 
-  gwNu <- premfootie %>% filter(is.na(Goal) & Round.Number == N)  
-    
+########## updated_unplayed if its using the most probable joint outcome #########
+
+# updated_unplayed = function(N, scored) {
+#   
+#   gwNu <- premfootie %>% filter(is.na(Goal) & Round.Number == N)  
+#   
+#   for(i in 1:nrow(gwNu)) {
+#     # Extract the home and away teams for the i-th row
+#     team <- gwNu$Team[i]
+#     opp <- gwNu$Opponent[i]
+#     
+#     
+#     extractdata = scored %>% with(table(.[[team]],.[[opp]])) %>% prop.table() %>% 
+#       as_tibble(.name_repair = ~vctrs::vec_as_names(c(team,opp,"n"),quiet=TRUE)) %>% 
+#       mutate(across(where(is.character),as.numeric))
+#     
+#     max_row_index <- which.max(extractdata$n)
+#     max_row <- extractdata[max_row_index, ]
+#     
+#     # Extract the predicted goals for the home and away teams from the most likely result "max_row"
+#     team_goals <- max_row[1]
+#     # away_goals <- max_row[2] turns out this not needed since we are doing specific team rows in order
+#     
+#     gwNu$Goal[i] <- team_goals
+#     
+#   }
+#   
+#   return(gwNu)
+# }
+
+
+updated_unplayed = function(N, scored) {
+  
+  gwNu = premfootie %>% filter(is.na(Goal) & (Round.Number == N))
+  
+
+  scored_long = scored %>%
+    pivot_longer(cols = everything(),
+                 names_to = "Team",
+                 values_to = "Goals")
+
+  
   for(i in 1:nrow(gwNu)) {
     # Extract the home and away teams for the i-th row
-    team <- gwNu$Team[i]
-    opp <- gwNu$Opponent[i]
-  
+    team = gwNu$Team[i]
     
-    extractdata = scored %>% with(table(.[[team]],.[[opp]])) %>% prop.table() %>% 
-      as_tibble(.name_repair = ~vctrs::vec_as_names(c(team,opp,"n"),quiet=TRUE)) %>% 
-      mutate(across(where(is.character),as.numeric))
+    # Calculate the mean of the scored tibble for the given team
+    team_goals = scored_long %>%
+      filter(Team == team) %>%
+      summarize(mean_goals = mean(Goals, na.rm = TRUE)) %>%
+      pull(mean_goals)
     
-    max_row_index <- which.max(extractdata$n)
-    max_row <- extractdata[max_row_index, ]
-    
-    # Extract the predicted goals for the home and away teams from the most likely result "max_row"
-    team_goals <- max_row[1]
-    # away_goals <- max_row[2] turns out this not needed since we are doing specific team rows in order
-    
-    gwNu$Goal[i] <- team_goals
-  
+    gwNu$Goal[i] = round(team_goals)
   }
-
-  return(gwNu)
+  
+  return(gwNu %>% select(ID_game, Team, Goal, Opponent))
 }
 
 
+##### but if 
 
 
 
-# # Updating the Goal column in premfootie dataframe
-# premfootie_updated <- premfootie %>%
-#   mutate(Goal = ifelse(ID_game %in% gw28U$ID_game, gw28U$Goal[match(ID_game, gw28U$ID_game)], Goal))
 
-
-# Define the update_footie function
-update_footie <- function(gwU, footie) {
-  footie_updated <- footie %>%
-    mutate(Goal = case_when(
-      ID_game %in% gwU$ID_game ~ as.character(gwU$Goal[match(ID_game, gwU$ID_game)]),
-      TRUE ~ as.character(Goal)
-    ))
+# Define the update_footie function that just updates the prem footie goal column with the new updated unplayed fixtures in the given rund
+update_footie = function(gwNu, footie) {
+  footie_updated = footie %>%
+   rows_update(gwNu, by = c("ID_game", "Team"))
   return(footie_updated)
 }
 
-# Update the premfootie dataframe
-# premfootie <- update_footie(gw28U, premfootie)
+# ufr28test = update_footie(gw28U,premfootie)
 
-
-
+# var updater just updates the other variables such as form points won etc, based on the new goal inputs
+#uses the same code as before nothing new
 var_updater = function(pf){
-  ### create points won , ' total_points ' days_since_last variable
-  
-  pf = pf %>% group_by(ID_game) %>% 
+  pf=pf %>% 
+    group_by(ID_game) %>% mutate(
+      Opponent=c(Team[2],Team[1])
+    ) %>% ungroup() %>% 
+    select(ID_game,date,Team,Goal,Opponent,tournament,Location,Home,everything()) 
+  pf=pf %>% group_by(ID_game) %>% 
     mutate(
       points_won=case_when(
         (Goal[1]>Goal[2])~c(3,0),
@@ -553,27 +611,26 @@ var_updater = function(pf){
     group_by(Team) %>% 
     mutate(total_points=cumsum(points_won),
            days_since_last=as.numeric(date-lag(date))
-    ) %>% ungroup()
+    ) %>%ungroup()
   
-  
-  
-  # Compute differences in ranks & points, and relative strength
+
   pf=pf %>% group_by(ID_game) %>% 
     mutate(
       diff_point=c(total_points[1]-total_points[2],total_points[2]-total_points[1]),
+      # diff_rank=c(rank[2]-rank[1],rank[1]-rank[2]),
       rel_strength=c(total_points[1]/(total_points[1]+total_points[2]),total_points[2]/(total_points[1]+total_points[2]))
     ) %>% ungroup()
   
-  
-  
-# create form column
-  pf=pf %>% 
+   pf=pf %>% 
     group_by(Team) %>% 
-    mutate(form=lag(zoo::rollsumr(points_won/rel_strength,3,fill=NA))) %>% ungroup()
+    mutate(game_number = row_number(),
+           form= ifelse( game_number >= 5, lag(zoo::rollsumr(points_won/15,5,fill=NA)), NA_real_)) %>% 
+    ungroup()
   
   
-# create GC,GD,GDdiff, ID columns
-    pf <- pf %>%
+  #perhaps create a total goal scored column and conceded column, and maybe a goal difference column? I could even make a column that would use Goal difference- difference between each team ?
+  # could experiment more with these, i.e. total GS diff, or making variables that similar to form track goalscoring form over past few games.
+  pf = pf %>%
     group_by(ID_game) %>%
     mutate(GC = c(Goal[2],Goal[1]),
            GD = c(as.numeric(Goal[1])-as.numeric(Goal[2]),as.numeric(Goal[2])-as.numeric(Goal[1])),
@@ -581,7 +638,9 @@ var_updater = function(pf){
     ungroup() %>% group_by(Team) %>% 
     mutate(total_GC = cumsum(GC),
            total_G = cumsum(Goal),
-           total_GD = cumsum(GD)) %>% ungroup()  %>% 
+           total_GD = cumsum(GD),
+           GCpg = total_GC/game_number,
+           Gpg = total_G / game_number,) %>% ungroup()  %>% 
     group_by(ID_game) %>% mutate(ID=cur_group_id()) %>% ungroup() 
   
   
@@ -590,28 +649,18 @@ var_updater = function(pf){
     group_by(Round.Number) %>%
     mutate(rank = dense_rank(desc(total_points))) %>%
     ungroup() %>% group_by(ID_game) %>% 
-    mutate(diff_rank=c(rank[1]-rank[2],rank[2]-rank[1])) 
-
-  
+    mutate(diff_rank=c(rank[1]-rank[2],rank[2]-rank[1]))  %>%
+    ungroup()
+    
   return(pf)
 }
 
 
-#rN 
-
-roundN <- function(N, footie){
-  rN <- make_scored(N,m,nsims=10000)
-  gwNU <- updated_unplayed(N,rN)
-  footie <- update_footie(gwNU, footie)
-  footie <- var_updater(footie)
-}
 
 
 
 
-
-
-datprep = function(pf){
+datprep = function(pf,r){
   data=
     # Here "fixes" the data
     pf %>% 
@@ -629,37 +678,247 @@ datprep = function(pf){
   return(data)
 }
 
-inlamark <- function(){}
-
-m=inla(formula,
-       data=data,
-       family="poisson",
-       control.predictor=list(compute=TRUE,link=1),
-       control.compute=list(config=TRUE,dic=TRUE))
-summary(m)
 
 
-#for r=25
-r25 = make_scored(25,m,nsims=10000)
-gw25U <- updated_unplayed(25,r25)
-premfootie <- update_footie(gw25U, premfootie)
-premfootie <- var_updater(premfootie)
+#rN  does all above for a given round N including the initial make_scored() 
 
-#for r=26
+roundN = function(N, rN, footie){
+  gwNU = updated_unplayed(N,rN)
+  footie = update_footie(gwNU, footie)
+  footie = var_updater(footie)
+  return(footie)
+}
 
-data = datprep(premfootie)
-
-r25 = make_scored(25,m,nsims=10000)
-gw25U <- updated_unplayed(25,r25)
-premfootie <- update_footie(gw25U, premfootie)
-premfootie <- var_updater(premfootie)
+#running predictions from INLA
+r28 = make_scored(28,m,nsims=10000)
+# then running roundN which updates premfootie df with the new goals then updates the rest of the variables based on these new results
+premfootie28 = roundN(28,r28, premfootie)
 
 
 
+####### Round 29 #######
+r=29
+data = datprep(premfootie28,r)
+#after this go back to the INLA Model section and run before using round N again
+#after going back to line 237 and running INLA, we run roundN for round 29, using the last used premfootie dataset which in this case is premfootie28
+
+#make sure to rune make_scored for this given round first
+r29 = make_scored(29, m, nsims=10000)
+#now we can run roundN using the arguments N, rN, premfootie`N-1`
+premfootie29 = roundN(29,r29, premfootie28)
+
+###
+###
+##### I have tried creating functions that will streamline the process
+##### instead of iteratively doing it, but iterative works for now
+##### when using functions I get errors particularly when running roundN because of updated_unplayed 's use of pivot_lonsger()
+###
+###
+
+
+####### Round 30 #######
+r=30
+data = datprep(premfootie29,r)
+m=runINLA(data)
+r30=make_scored(30,m,nsims=10000)
+premfootie30 = roundN(30,r30,premfootie29)
+
+####### Round 31 #######
+
+r=31
+data = datprep(premfootie30,r)
+m=runINLA(data)
+r31=make_scored(31,m,nsims=10000)
+premfootie31 = roundN(31,r31,premfootie30)
+
+####### Round 32 #######
+# trying to make a function that runs it all at once doesnt work because of :
+# Error in `pivot_longer()`:
+#   ! `cols` must select at least one column.
+# runtest = function(pf, n){
+#   x=n
+#   data = datprep(pf,x)
+#   m=runINLA(data)
+#   rN=make_scored(x,m,nsims=10000)
+#   premfootie32 = roundN(x,rN,pf)  
+# 
+# }
+# 
+# premfootie32test = runtest(premfootie31, n=32)
 
 
 
+r=32
+data = datprep(premfootie31,r)
+m=runINLA(data)
+r32=make_scored(32,m,nsims=10000)
+premfootie32 = roundN(32,r32,premfootie31)
 
-# i now need to fix the case for double gameweeks, sometimes there are cases where form = NA for example
+
+####### Round 33 #######
+
+r=33
+data = datprep(premfootie32,r)
+m=runINLA(data)
+r33=make_scored(33,m,nsims=10000)
+premfootie33 = roundN(33,r33,premfootie32)
 
 
+####### Round 34 #######
+
+r=34
+data = datprep(premfootie33,r)
+m=runINLA(data)
+r34=make_scored(34,m,nsims=10000)
+premfootie34 = roundN(34,r34,premfootie33)
+
+
+####### Round 35 #######
+
+r=35
+data = datprep(premfootie34,r)
+m=runINLA(data)
+r35=make_scored(35,m,nsims=10000)
+premfootie35 = roundN(35,r35,premfootie34)
+
+
+####### Round 36 #######
+
+r=36
+data = datprep(premfootie35,r)
+m=runINLA(data)
+r36=make_scored(36,m,nsims=10000)
+premfootie36 = roundN(36,r36,premfootie35)
+
+
+####### Round 37 #######
+
+r=37
+data = datprep(premfootie36,r)
+m=runINLA(data)
+r37=make_scored(37,m,nsims=10000)
+premfootie37 = roundN(37,r37,premfootie36)
+
+
+####### Round 38 #######
+
+r=38
+data = datprep(premfootie37,r)
+m=runINLA(data)
+r38=make_scored(38,m,nsims=10000)
+premfootie38 = roundN(38,r38,premfootie37)
+
+
+####### Round 39 #######
+
+r=39
+data = datprep(premfootie38,r)
+m=runINLA(data)
+r39=make_scored(39,m,nsims=10000)
+premfootie39 = roundN(39,r39,premfootie38)
+
+
+####### Round 40 #######
+
+r=40
+data = datprep(premfootie39,r)
+m=runINLA(data)
+r40=make_scored(40,m,nsims=10000)
+premfootie40 = roundN(40,r40,premfootie39)
+
+
+####### Round 41 #######
+
+r=41
+data = datprep(premfootie40,r)
+m=runINLA(data)
+r41=make_scored(41,m,nsims=10000)
+premfootie41 = roundN(41,r41,premfootie40)
+
+
+####### Round 42 #######
+
+r=42
+data = datprep(premfootie41,r)
+m=runINLA(data)
+r42=make_scored(42,m,nsims=10000)
+premfootie42 = roundN(42,r42,premfootie41)
+
+
+####### Round 43 #######
+
+r=43
+data = datprep(premfootie42,r)
+m=runINLA(data)
+r43=make_scored(43,m,nsims=10000)
+premfootie43 = roundN(43,r43,premfootie42)
+
+
+####### Round 44 #######
+
+r=44
+data = datprep(premfootie43,r)
+m=runINLA(data)
+r44=make_scored(44,m,nsims=10000)
+premfootie44 = roundN(44,r44,premfootie43)
+
+####### Compiling Premier League Table #######
+saveRDS(premfootie44,"r44FinalfootieFrame.rds")
+
+Finalround = premfootie44 %>% filter( Round.Number == 44)
+
+
+
+premier_league_table <- Finalround %>%
+  arrange(desc(total_points), desc(total_GD), desc(total_G)) %>%
+  ungroup() %>%        # had to add ungroup() here because it automatically groups by ID_game
+  mutate(Position = row_number()) %>%
+  select(Position,Team,total_points, total_G, total_GC, total_GD) 
+
+
+
+premier_league_table 
+
+
+saveRDS(premier_league_table, "EndOfSeasonTable2223.rds")
+
+
+
+###### Ninla - trying making it quicker #######
+Ninla = function(N,pf){
+  r=N
+  df = datprep(pf,r)
+
+  
+  inlam = runINLA(df)
+  # return(summary(inmod)) ?
+  set.seed(2223)
+  rN = make_scored(N,inlam,nsims=10000)
+  
+  # return(head(df))
+  # return(head(rN))
+  premfootieN = roundN(r,rN,pf)
+  
+  return(premfootieN)
+}
+# ##### doesnt work because of some error 
+# > premfootie30 = Ninla(30,premfootie29)
+# Error in `pivot_longer()`:
+#   ! `cols` must select at least one column.
+# Run `rlang::last_error()` to see where the error occurred.
+
+# premfootie30 = Ninla(30,premfootie29)
+# premfootie31 = Ninla(31,premfootie30)
+# premfootie32 = Ninla(32,premfootie31)
+# premfootie33 = Ninla(33,premfootie32)
+# premfootie34 = Ninla(34,premfootie33)
+# premfootie35 = Ninla(35,premfootie34)
+# premfootie36 = Ninla(36,premfootie35)
+# premfootie37 = Ninla(37,premfootie36)
+# premfootie38 = Ninla(38,premfootie37)
+# premfootie39 = Ninla(39,premfootie38)
+# premfootie40 = Ninla(40,premfootie39)
+# premfootie41 = Ninla(41,premfootie40)
+# premfootie42 = Ninla(42,premfootie41)
+# premfootie43 = Ninla(43,premfootie42)
+# premfootie44 = Ninla(44,premfootie43)

@@ -161,7 +161,8 @@ premfootie = premfootie %>%
   group_by(Round.Number) %>%
   mutate(rank = dense_rank(desc(total_points))) %>%
   ungroup() %>% group_by(ID_game) %>% 
-  mutate(diff_rank=c(rank[1]-rank[2],rank[2]-rank[1])) 
+  mutate(diff_rank=c(rank[1]-rank[2],rank[2]-rank[1])) %>%
+  ungroup()
 
 
 ### fine here , idris
@@ -192,11 +193,11 @@ formula = Goal ~ Home +
   # diff_point +
   # diff_rank +
   # form +
-  rel_strength +
-  days_since_last +
-  Gpg +
+  # rel_strength +
+  # days_since_last +
+  # Gpg +
   # GCpg +
-  GDdiff + 
+  # GDdiff + 
   f(factor(Team), model = "iid") +     # f() is used to define General Gasuain Model in INLA formula
   f(factor(Opponent), model = "iid") # +
 # Time component wek by team to account for difference in time performance
@@ -235,7 +236,7 @@ data=
 
 
 ########## INLA Model #########
-m=inla(formula,
+m=inla(formula=formula,
        data=data,
        family="poisson",
        control.predictor=list(compute=TRUE,link=1),
@@ -243,19 +244,20 @@ m=inla(formula,
 summary(m)
 
 
-runINLA <- function(dat){
-  inmod=inla(formula,
+runINLA <- function(formu,dat){
+  inmod=inla(formula=formu,
          data=dat,
          family="poisson",
          control.predictor=list(compute=TRUE,link=1),
          control.compute=list(config=TRUE,dic=TRUE))
-  return(inmod)
+  inmod
 }
 
 
 ########## Source Utility Functions ########
 
 source("UtilityFunctions.R")
+
 #above sources the following functions: 
 # time_trend() , "for the RW2 model of over time performance" - doesnt work when i try to run anyways
 # attack_defense() , plot of attack_defence effects
@@ -328,16 +330,18 @@ team_strength=function(m,effect="attack") {
 #IDris, tried to remove mutate(form=case_when....)
 
 # Post-processing Used to predict the number of goals scored in.a new game
-make_scored=function(round,model,nsims=1000) {
+make_scored=function(round,dt,model,nsims=1000){
   r=round
   m=model
   # Then selects the relevant indices
-  idx=(data %>%  mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>% 
+  idx=(dt %>%  mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>% 
          filter(Round.Number%in%c(NA,r))) %>% mutate(num=row_number()) %>% filter(Round.Number==r) %>% pull(num)
   jpost=inla.posterior.sample(n=nsims,m)
   topredict=tail(grep("Predictor",rownames(jpost[[1]]$latent)),length(idx))
+  
   theta.pred=matrix(exp(unlist(lapply(jpost,function(x) x$latent[idx,]))),ncol=length(idx),byrow=T) 
-  colnames(theta.pred)= (data %>%  mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>%
+  
+  colnames(theta.pred)= (dt %>%  mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>%
                            filter(Round.Number%in%c(NA,r))) %>% mutate(num=row_number()) %>% filter(Round.Number==r) %>% pull(Team)
   theta.pred=theta.pred %>% as_tibble()
   # Predictions from the posterior distribution for the number of goals scored
@@ -357,13 +361,13 @@ plot_joint=function(x,y,scored,result=NULL,annotate=TRUE,...) {
   if(exists("annotate_size",exArgs)) {annotate_size=exArgs$annotate_size} else {annotate_size=6}
   if(exists("title",exArgs)) {title=exArgs$title} else {title=paste0("Joint posterior probability for the number of goal scored: ",x," vs ",y)}
   
-  data=scored %>% with(table(.[[x]],.[[y]])) %>% prop.table() %>% 
+  dt=scored %>% with(table(.[[x]],.[[y]])) %>% prop.table() %>% 
     as_tibble(.name_repair = ~vctrs::vec_as_names(c(x,y,"n"),quiet=TRUE)) %>% 
     mutate(across(where(is.character),as.numeric))
   if(!is.null(result)){
-    data=data %>% mutate(obs=case_when((.[[x]]==result[1] & .[[y]]==result[2])~1,TRUE~0)) 
+    dt=dt %>% mutate(obs=case_when((.[[x]]==result[1] & .[[y]]==result[2])~1,TRUE~0)) 
   }
-  pl = data %>% ggplot(aes(as.factor(!!sym(x)),as.factor(!!sym(y)),fill=100*n))+geom_tile()
+  pl = dt %>% ggplot(aes(as.factor(!!sym(x)),as.factor(!!sym(y)),fill=100*n))+geom_tile()
   if(!is.null(result)) {
     pl=pl+geom_text(aes(label=paste0(format(100*n,digits=2,nsmall=2),"%"),color=obs>0),size=annotate_size,fontface="bold")+
       scale_fill_gradient(low="white", high="black")+#theme_gb()+
@@ -416,7 +420,7 @@ plot_joint=function(x,y,scored,result=NULL,annotate=TRUE,...) {
   }
   if(exists("max_goal",exArgs)){
     max_goal=exArgs$max_goal
-    pl=pl+xlim(levels(as.factor(data[[x]]))[1:(max_goal+1)])+ylim(levels(as.factor(data[[x]]))[1:(max_goal+1)])
+    pl=pl+xlim(levels(as.factor(dt[[x]]))[1:(max_goal+1)])+ylim(levels(as.factor(dt[[x]]))[1:(max_goal+1)])
   }
   pl
 }
@@ -477,7 +481,7 @@ team_strength(m, "defense")
 
 set.seed(2223)
 
-# premtest <- make_scored(28,m,nsims=10000)
+# premtest <- make_scored(28,m,nsims=1000)
 # joint_marginal("Liverpool", "Fulham", premtest)  # Draw 1-1
 # joint_marginal("Manchester Utd", "Brighton", premtest)  #draw 1-1
 # joint_marginal("Manchester City", "West Ham", premtest) # draw 1-1
@@ -514,7 +518,7 @@ set.seed(2223)
 
 
 #for r=28
-# r28 = make_scored(28,m,nsims=10000)
+# r28 = make_scored(28,m,nsims=1000)
 # gw28u = premfootie %>% filter(is.na(Goal & Round.Number == 28))
 
 ########## updated_unplayed if its using the most probable joint outcome #########
@@ -661,7 +665,7 @@ var_updater = function(pf){
 
 
 datprep = function(pf,r){
-  data=
+  dat=
     # Here "fixes" the data
     pf %>% 
     arrange(date) %>% mutate(
@@ -675,7 +679,7 @@ datprep = function(pf,r){
     ) %>% 
     # Then filters only the games in a given round (for prediction)
     filter(Round.Number%in%c(NA,1:r)) # Here I have changed the code to 1:r to ensure it keeps the updated data too  
-  return(data)
+  return(dat)
 }
 
 
@@ -689,10 +693,15 @@ roundN = function(N, rN, footie){
   return(footie)
 }
 
+
+
+####### First Predictions: Round 28 #######
+
 #running predictions from INLA
-r28 = make_scored(28,m,nsims=10000)
+r28 = make_scored(28,dt=data,model=m,nsims=1000)
 # then running roundN which updates premfootie df with the new goals then updates the rest of the variables based on these new results
 premfootie28 = roundN(28,r28, premfootie)
+
 
 
 
@@ -701,11 +710,14 @@ r=29
 data = datprep(premfootie28,r)
 #after this go back to the INLA Model section and run before using round N again
 #after going back to line 237 and running INLA, we run roundN for round 29, using the last used premfootie dataset which in this case is premfootie28
-
+m = runINLA(formu = formula,dat=data)
 #make sure to rune make_scored for this given round first
-r29 = make_scored(29, m, nsims=10000)
+r29 = make_scored(29, dt=data,model=m, nsims=1000)
 #now we can run roundN using the arguments N, rN, premfootie`N-1`
 premfootie29 = roundN(29,r29, premfootie28)
+
+
+
 
 ###
 ###
@@ -719,16 +731,17 @@ premfootie29 = roundN(29,r29, premfootie28)
 ####### Round 30 #######
 r=30
 data = datprep(premfootie29,r)
-m=runINLA(data)
-r30=make_scored(30,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r30=make_scored(30, dt=data,model=m,nsims=1000)
 premfootie30 = roundN(30,r30,premfootie29)
 
 ####### Round 31 #######
 
+
 r=31
 data = datprep(premfootie30,r)
-m=runINLA(data)
-r31=make_scored(31,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r31=make_scored(31, dt=data,model=m,nsims=1000)
 premfootie31 = roundN(31,r31,premfootie30)
 
 ####### Round 32 #######
@@ -738,8 +751,8 @@ premfootie31 = roundN(31,r31,premfootie30)
 # runtest = function(pf, n){
 #   x=n
 #   data = datprep(pf,x)
-#   m=runINLA(data)
-#   rN=make_scored(x,m,nsims=10000)
+#   m=runINLA(formu = formula,dat=data)
+#   rN=make_scored(x, dt=data,model=m,nsims=1000)
 #   premfootie32 = roundN(x,rN,pf)  
 # 
 # }
@@ -750,8 +763,8 @@ premfootie31 = roundN(31,r31,premfootie30)
 
 r=32
 data = datprep(premfootie31,r)
-m=runINLA(data)
-r32=make_scored(32,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r32=make_scored(32, dt=data,model=m,nsims=1000)
 premfootie32 = roundN(32,r32,premfootie31)
 
 
@@ -759,8 +772,8 @@ premfootie32 = roundN(32,r32,premfootie31)
 
 r=33
 data = datprep(premfootie32,r)
-m=runINLA(data)
-r33=make_scored(33,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r33=make_scored(33, dt=data,model=m,nsims=1000)
 premfootie33 = roundN(33,r33,premfootie32)
 
 
@@ -768,8 +781,8 @@ premfootie33 = roundN(33,r33,premfootie32)
 
 r=34
 data = datprep(premfootie33,r)
-m=runINLA(data)
-r34=make_scored(34,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r34=make_scored(34, dt=data,model=m,nsims=1000)
 premfootie34 = roundN(34,r34,premfootie33)
 
 
@@ -777,8 +790,8 @@ premfootie34 = roundN(34,r34,premfootie33)
 
 r=35
 data = datprep(premfootie34,r)
-m=runINLA(data)
-r35=make_scored(35,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r35=make_scored(35, dt=data,model=m,nsims=1000)
 premfootie35 = roundN(35,r35,premfootie34)
 
 
@@ -786,8 +799,8 @@ premfootie35 = roundN(35,r35,premfootie34)
 
 r=36
 data = datprep(premfootie35,r)
-m=runINLA(data)
-r36=make_scored(36,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r36=make_scored(36, dt=data,model=m,nsims=1000)
 premfootie36 = roundN(36,r36,premfootie35)
 
 
@@ -795,8 +808,8 @@ premfootie36 = roundN(36,r36,premfootie35)
 
 r=37
 data = datprep(premfootie36,r)
-m=runINLA(data)
-r37=make_scored(37,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r37=make_scored(37, dt=data,model=m,nsims=1000)
 premfootie37 = roundN(37,r37,premfootie36)
 
 
@@ -804,8 +817,8 @@ premfootie37 = roundN(37,r37,premfootie36)
 
 r=38
 data = datprep(premfootie37,r)
-m=runINLA(data)
-r38=make_scored(38,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r38=make_scored(38, dt=data,model=m,nsims=1000)
 premfootie38 = roundN(38,r38,premfootie37)
 
 
@@ -813,8 +826,8 @@ premfootie38 = roundN(38,r38,premfootie37)
 
 r=39
 data = datprep(premfootie38,r)
-m=runINLA(data)
-r39=make_scored(39,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r39=make_scored(39, dt=data,model=m,nsims=1000)
 premfootie39 = roundN(39,r39,premfootie38)
 
 
@@ -822,8 +835,8 @@ premfootie39 = roundN(39,r39,premfootie38)
 
 r=40
 data = datprep(premfootie39,r)
-m=runINLA(data)
-r40=make_scored(40,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r40=make_scored(40, dt=data,model=m,nsims=1000)
 premfootie40 = roundN(40,r40,premfootie39)
 
 
@@ -831,8 +844,8 @@ premfootie40 = roundN(40,r40,premfootie39)
 
 r=41
 data = datprep(premfootie40,r)
-m=runINLA(data)
-r41=make_scored(41,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r41=make_scored(41, dt=data,model=m,nsims=1000)
 premfootie41 = roundN(41,r41,premfootie40)
 
 
@@ -840,8 +853,8 @@ premfootie41 = roundN(41,r41,premfootie40)
 
 r=42
 data = datprep(premfootie41,r)
-m=runINLA(data)
-r42=make_scored(42,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r42=make_scored(42, dt=data,model=m,nsims=1000)
 premfootie42 = roundN(42,r42,premfootie41)
 
 
@@ -849,8 +862,8 @@ premfootie42 = roundN(42,r42,premfootie41)
 
 r=43
 data = datprep(premfootie42,r)
-m=runINLA(data)
-r43=make_scored(43,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r43=make_scored(43, dt=data,model=m,nsims=1000)
 premfootie43 = roundN(43,r43,premfootie42)
 
 
@@ -858,8 +871,8 @@ premfootie43 = roundN(43,r43,premfootie42)
 
 r=44
 data = datprep(premfootie43,r)
-m=runINLA(data)
-r44=make_scored(44,m,nsims=10000)
+m=runINLA(formu = formula,dat=data)
+r44=make_scored(44, dt=data,model=m,nsims=1000)
 premfootie44 = roundN(44,r44,premfootie43)
 
 ####### Compiling Premier League Table #######
@@ -883,6 +896,21 @@ premier_league_table
 saveRDS(premier_league_table, "EndOfSeasonTable2223.rds")
 
 
+pltableround = function(N){
+  round = premfootie44 %>% filter( Round.Number == N)
+  
+  pltab <- round %>%
+    arrange(desc(total_points), desc(total_GD), desc(total_G)) %>%
+    ungroup() %>%        # had to add ungroup() here because it automatically groups by ID_game
+    mutate(Position = row_number()) %>%
+    select(Position,Team,total_points, total_G, total_GC, total_GD)
+  
+  pltab
+}
+
+r28tab = pltableround(28)
+r28tab
+
 
 ###### Ninla - trying making it quicker #######
 Ninla = function(N,pf){
@@ -890,10 +918,10 @@ Ninla = function(N,pf){
   df = datprep(pf,r)
 
   
-  inlam = runINLA(df)
+  inlam = runINLA(formu = formula , dat=df)
   # return(summary(inmod)) ?
   set.seed(2223)
-  rN = make_scored(N,inlam,nsims=10000)
+  rN = make_scored(N,inlam,nsims=1000)
   
   # return(head(df))
   # return(head(rN))

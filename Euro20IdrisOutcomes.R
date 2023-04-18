@@ -346,11 +346,14 @@ team_strength=function(m,effect="attack") {
 
 # Post-processing Used to predict the number of goals scored in.a new game
 make_scored=function(round,model,nsims=1000) {
+  
   r=round
   m=model
   # Then selects the relevant indices
+  
   idx=(data %>% # mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>% 
          filter(Round.Number%in%c(NA,r))) %>% mutate(num=row_number()) %>% filter(Round.Number==r) %>% pull(num)
+  
   jpost=inla.posterior.sample(n=nsims,m)
   topredict=tail(grep("Predictor",rownames(jpost[[1]]$latent)),length(idx))
   theta.pred=matrix(exp(unlist(lapply(jpost,function(x) x$latent[idx,]))),ncol=length(idx),byrow=T) 

@@ -56,22 +56,23 @@ team_strength=function(m,effect="attack") {
 #IDris, tried to remove mutate(form=case_when....)
 
 # Post-processing Used to predict the number of goals scored in.a new game
-make_scored=function(round,model,nsims=1000) {
+make_scored=function(round,dt,model,nsims=1000){
   r=round
   m=model
   # Then selects the relevant indices
-  idx=(data %>%  mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>% 
+  idx=(dt %>%  mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>% 
          filter(Round.Number%in%c(NA,r))) %>% mutate(num=row_number()) %>% filter(Round.Number==r) %>% pull(num)
   jpost=inla.posterior.sample(n=nsims,m)
   topredict=tail(grep("Predictor",rownames(jpost[[1]]$latent)),length(idx))
+  
   theta.pred=matrix(exp(unlist(lapply(jpost,function(x) x$latent[idx,]))),ncol=length(idx),byrow=T) 
-  colnames(theta.pred)= (data %>%  mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>%
+  
+  colnames(theta.pred)= (dt %>%  mutate(form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form)) %>%
                            filter(Round.Number%in%c(NA,r))) %>% mutate(num=row_number()) %>% filter(Round.Number==r) %>% pull(Team)
   theta.pred=theta.pred %>% as_tibble()
   # Predictions from the posterior distribution for the number of goals scored
   scored=theta.pred %>% mutate(across(everything(),~rpois(nrow(theta.pred),.)))
 }
-
 
 
 
@@ -217,31 +218,23 @@ joint_marginal=function(x,y,scored,result=NULL,...) {
 
 ########## updated_unplayed if its using sample mean #########
 
-updated_unplayed = function(N,footie, scored) {
+updated_unplayed = function(N,roundata, scored) {
   
-  gwNu = footie %>% filter(is.na(Goal) & (Round.Number == N))
-  
-  
-  scored_long = scored %>%
-    pivot_longer(cols = everything(),
-                 names_to = "Team",
-                 values_to = "Goals")
-  
+  gwNu = roundata %>% filter(is.na(Goal) & (Round.Number == N))
+  # create a vector of team names from the scored dataframe
+  scored_names = colnames(scored)
   
   for(i in 1:nrow(gwNu)) {
     # Extract the home and away teams for the i-th row
-    team = gwNu$Team[i]
+    gwNteam = gwNu[i, "Team"]
     
     # Calculate the mean of the scored tibble for the given team
-    team_goals = scored_long %>%
-      filter(Team == team) %>%
-      summarize(mean_goals = mean(Goals, na.rm = TRUE)) %>%
-      pull(mean_goals)
-    
+    team_scored_col = scored[[as.character(gwNteam)]]
+    team_goals = mean(team_scored_col)
     gwNu$Goal[i] = round(team_goals)
   }
   
-  return(gwNu %>% select(ID_game, Team, Goal, Opponent))
+  return(gwNu %>% select(ID_game, Team, Goal, Opponent,num))
 }
 
 
@@ -254,7 +247,7 @@ updated_unplayed = function(N,footie, scored) {
 update_footie = function(gwU, footie) {
   footie_updated = footie %>%
     mutate(Goal = case_when(
-      ID_game %in% gwU$ID_game ~ gwU$Goal[match(ID_game, gwU$ID_game)],
+      num %in% gwU$num ~ gwU$Goal[match(num, gwU$num)],
       TRUE ~ Goal
     ))
   return(footie_updated)
@@ -327,10 +320,10 @@ var_updater = function(pf){
 
 #rN 
 
-roundN = function(N,scored ,footie){
-  gwNU = updated_unplayed(N,footie,scored)
-  footiep1 = update_footie(gwNU, footie)
-  footiep2 = var_updater(footie)
+roundN = function(N,scored,roundata,prevfootie){
+  gwNU = updated_unplayed(N,roundata,scored)
+  footiep1 = update_footie(gwNU, prevfootie)
+  footiep2 = var_updater(footiep1)
   footiep2
 }
 

@@ -114,7 +114,8 @@ laligasched <- as_tibble(laliga2223) %>%
       Location=="Estadio Manuel Martínez Valero" ~ "Elche",
       Location=="Estadi Municipal de Montilivi" ~ "Girona",
       Location=="Estadio Ciudad de Valencia" ~ "Villarreal",
-      Location=="Estadio del Rayo Vallecano" ~ "Rayo Vallecano"
+      Location=="Estadio del Rayo Vallecano" ~ "Rayo Vallecano",
+      Location=="Estadio Cívitas Metropolitano" ~ "Atlético Madrid"
     )
   ) %>% rename(
     home_team = Home,
@@ -353,7 +354,6 @@ laligadata=
     # diff_point=scale(diff_point,scale=TRUE),
     # diff_rank=scale(diff_rank,scale=TRUE),
     # days_since_last=scale(days_since_last,scale=TRUE),
-    num=row_number(),
     id_date=date %>% as.factor() %>% as.numeric()
   ) %>% 
   # Then filters only the games in a given round (for prediction)
@@ -384,57 +384,7 @@ liga23 = t5make_scored(round=23,dt=laligadata,model=mlaliga,nsims=1000)
 
 
 
-# updated_unplayed = function(N,footie, scored) {
-  
-  gw23u = laligadata %>% filter(is.na(Goal) & (Round.Number == 23))
-  
-  
-  # scored_long = scored %>%
-  #   pivot_longer(cols = everything(),
-  #                names_to = "Team",
-  #                values_to = "Goals")
-  # 
-  scoredtest = liga23 
-    
-  for(i in 1:nrow(gwNu)) {
-    # Extract the home and away teams for the i-th row
-    team = gwNu$Team[i]
-    
-    # Calculate the mean of the scored tibble for the given team
-    team_goals = scored_long %>%
-      filter(Team == team) %>%
-      summarize(mean_goals = mean(Goals, na.rm = TRUE)) %>%
-      pull(mean_goals)
-    
-    gwNu$Goal[i] = round(team_goals)
-  }
-  
-  return(gwNu %>% select(ID_game, Team, Goal, Opponent))
-# }
-
-
-
-
-
-testgwNU = updated_unplayed(23,laligafootie,liga23)
-
-update_footie = function(gwU, footie) {
-  footie_updated = footie %>%
-    mutate(Goal = case_when(
-      ID_game %in% gwU$ID_game ~ gwU$Goal[match(ID_game, gwU$ID_game)],
-      TRUE ~ Goal
-    ))
-  return(footie_updated)
-}
-
-
-testfootiep1 = update_footie(testgwNU, laligafootie)
-testfootiep2 = var_updater(footie)
-testfootiep2
-
-
-
-ligafootie23 = roundN(23,scored = liga23, footie = laligafootie) 
+ligafootie23 = roundN(23,scored = liga23,roundata = laligadata ,prevfootie = laligafootie) 
 
 
 ####### la liga  Round 24 #######
@@ -445,12 +395,41 @@ lldata24 = datprep(ligafootie23,r)
 mliga24=runINLA(formu = eq,dat=lldata24)
 
 t5team_strength(mliga24, lldata24)
-ll=make_scored(30, dt=data,model=m,nsims=1000)
-premfootie30 = roundN(30,r30,premfootie29)
+
+liga24 = t5make_scored(round=24,dt=lldata24,model=mliga24,nsims=1000)
+
+ligafootie24 = roundN(24,scored = liga24,roundata = lldata24 ,prevfootie = ligafootie23) 
+
+####### la liga  Round 25 #######
+r=25
+lldata25 = datprep(ligafootie24,r)
 
 
+mliga25=runINLA(formu = eq,dat=lldata25)
 
+t5team_strength(mliga25, lldata25)
 
+liga25 = t5make_scored(round=25,dt=lldata25,model=mliga25,nsims=1000)
+
+ligafootie25 = roundN(25,scored = liga25,roundata = lldata25 ,prevfootie = ligafootie24) 
+
+###### Ninla - trying making it quicker #######
+roundNinla = function(n,prevfootie){
+  df = datprep(prevfootie,n)
+  
+  
+  inlam = runINLA(formu = eq , dat=df)
+
+  set.seed(2223)
+  
+  rN = make_scored(round=n,dt=df, model = inlam,nsims=1000)
+
+  footieN = roundN(N=n,scored=rN,roundata = df , prevfootie=prevfootie)
+  
+  return(footieN)
+}
+
+ligafootie26 = roundNinla(26,ligafootie25)
 ######### Modelling Ligue 1 ##############
 
 # ligue1 only up to round.number 25
@@ -465,7 +444,6 @@ liguedata=
     # diff_point=scale(diff_point,scale=TRUE),
     # diff_rank=scale(diff_rank,scale=TRUE),
     # days_since_last=scale(days_since_last,scale=TRUE),
-    num=row_number(),
     id_date=date %>% as.factor() %>% as.numeric()
   ) %>% 
   # Then filters only the games in a given round (for prediction)
@@ -497,7 +475,6 @@ seriedata=
     # diff_point=scale(diff_point,scale=TRUE),
     # diff_rank=scale(diff_rank,scale=TRUE),
     # days_since_last=scale(days_since_last,scale=TRUE),
-    num=row_number(),
     id_date=date %>% as.factor() %>% as.numeric()
   ) %>% 
   # Then filters only the games in a given round (for prediction)

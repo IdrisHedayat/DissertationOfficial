@@ -92,4 +92,9 @@ FootieMaker = function(sched){
     ungroup() %>% group_by(ID_game) %>% 
     mutate(diff_rank=c(rank[1]-rank[2],rank[2]-rank[1])) %>%
     ungroup()
+  
+
+  #### finally adding a unique identifier for each team in each given game (i.e row number)
+  pf = pf %>%
+    mutate(num=row_number())
 }

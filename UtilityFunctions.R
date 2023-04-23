@@ -160,6 +160,8 @@ outcome_predict=function(x,y,scored) {
 }
 
 
+##### joint marginal is fine when working with all top 5 leagues
+
 joint_marginal=function(x,y,scored,result=NULL,...) {
   exArgs=list(...)
   if(exists("annotate_size",exArgs)) {annotate_size=exArgs$annotate_size} else {annotate_size=6}
@@ -188,33 +190,33 @@ joint_marginal=function(x,y,scored,result=NULL,...) {
 
 ########## updated_unplayed if its using the most probable joint outcome #########
 
-# updated_unplayed = function(N, scored) {
-#   
-#   gwNu = premfootie %>% filter(is.na(Goal) & Round.Number == N)  
-#   
-#   for(i in 1:nrow(gwNu)) {
-#     # Extract the home and away teams for the i-th row
-#     team = gwNu$Team[i]
-#     opp = gwNu$Opponent[i]
-#     
-#     
-#     extractdata = scored %>% with(table(.[[team]],.[[opp]])) %>% prop.table() %>% 
-#       as_tibble(.name_repair = ~vctrs::vec_as_names(c(team,opp,"n"),quiet=TRUE)) %>% 
-#       mutate(across(where(is.character),as.numeric))
-#     
-#     max_row_index = which.max(extractdata$n)
-#     max_row = extractdata[max_row_index, ]
-#     
-#     # Extract the predicted goals for the home and away teams from the most likely result "max_row"
-#     team_goals = max_row[1]
-#     # away_goals = max_row[2] turns out this not needed since we are doing specific team rows in order
-#     
-#     gwNu$Goal[i] = team_goals
-#     
-#   }
-#   
-#   return(gwNu)
-# }
+mpo_updated_unplayed = function(N,roundata, scored) {
+
+  gwNu = roundata %>% filter(is.na(Goal) & (Round.Number == N))
+  
+  for(i in 1:nrow(gwNu)) {
+    # Extract the home and away teams for the i-th row
+    gwNteam = gwNu[i, "Team"]
+    gwNopponent = gwNu[i+1, "Team"]
+    
+    extractdata = scored %>% with(table(.[[gwNteam]],.[[gwNopponent]])) %>% prop.table() %>%
+          as_tibble(.name_repair = ~vctrs::vec_as_names(c(gwNteam,gwNopponent,"n"),quiet=TRUE)) %>%
+          mutate(across(where(is.character),as.numeric))
+
+    max_row_index = which.max(extractdata$n)
+    max_row = extractdata[max_row_index, ]
+    
+    # Extract the predicted goals for the home and away teams from the most likely result "max_row"
+    team_goals = max_row[1]
+    # away_goals = max_row[2] turns out this not needed since we are doing specific team rows in order
+         
+    gwNu$Goal[i] = team_goals
+    
+    
+  }
+  
+  return(gwNu %>% select(ID_game, Team, Goal, Opponent,num))
+}
 
 ########## updated_unplayed if its using sample mean #########
 
@@ -308,11 +310,15 @@ var_updater = function(pf){
   
   # Calculate rank for each given round
   pf = pf %>%
-    group_by(Round.Number) %>%
-    mutate(rank = dense_rank(desc(total_points))) %>%
-    ungroup() %>% group_by(ID_game) %>% 
-    mutate(diff_rank=c(rank[1]-rank[2],rank[2]-rank[1])) %>%
+    group_by(game_number) %>%
+    mutate(rank = min_rank(desc(total_points)) +
+             row_number(desc(total_GD)) / 10000) %>%
+    mutate(rank = dense_rank(rank)) %>%
+    ungroup() %>% 
+    group_by(ID_game) %>%
+    mutate(diff_rank = c(rank[1] - rank[2], rank[2] - rank[1])) %>%
     ungroup()
+  
   
   return(pf)
 }
@@ -438,4 +444,71 @@ t5make_scored=function(round,dt,model,nsims=1000) {
   theta.pred=theta.pred %>% as_tibble()
   # Predictions from the posterior distribution for the number of goals scored
   scored=theta.pred %>% mutate(across(everything(),~rpois(nrow(theta.pred),.)))
+  
+  
+  
+  ##### Ninla #####
+  
+roundNinla = function(n,prevfootie){
+    df = datprep(prevfootie,n)
+    
+    
+    inlam = runINLA(formu = eq , dat=df)
+    
+    set.seed(2223)
+    
+    rN = make_scored(round=n,dt=df, model = inlam,nsims=100)
+    
+    footieN = roundN(N=n,scored=rN,roundata = df , prevfootie=prevfootie)
+    
+    list(footieN = footieN, rN = rN, inlam = inlam)
+  
+  }
 }
+
+
+
+###### trying to do t5time_trend ######
+
+# For the RW2 by team model
+t5time_trend=function(m,pf,date_start="2022-08-01",date_end="2023-06-11") {
+  date_start = as_date(date_start)
+  date_end = as_date(date_end)
+  ii=pf %>% mutate(Team2=Team,Team=factor(Team)) %>% mutate(Team=as.numeric(Team)) %>% 
+    filter(date <= date_end) %>% select(ID,date,Team2,Team,everything()) %>% with(unique(Team))
+  labs=(pf %>% with(levels(as.factor(Team))))[sort(ii)]
+  m$summary.random$id_date %>% as_tibble() %>% 
+    mutate(TeamID=rep(1:(pf %>% with(length(unique(Team)))),each=length(unique(m$summary.random$id_date$ID))),
+           Team=rep(levels(as.factor(pf$Team)),each=length(unique(m$summary.random$id_date$ID)))) %>% 
+    filter(TeamID %in% ii) %>% ggplot(aes(ID,mean,group=Team))+geom_line()+geom_ribbon(aes(ymin=`0.025quant`,ymax=`0.975quant`),alpha=.2) +
+    facet_wrap(~Team) +
+    scale_x_continuous(
+      name="Time",
+      breaks=pf %>% filter(date>=date_start) %>% arrange(ID) %>% mutate(tt=lubridate::year(date),id_date=date %>% as.factor %>% as.numeric()) %>% 
+        select(ID,date,tt,id_date,everything()) %>% group_by(tt) %>% slice(1) %>% pull(id_date),
+      labels=lubridate::year(date_start):lubridate::year(date_end)
+    ) + theme(axis.text.x=element_text(angle=60, hjust=1)) + ylab("Historical performance")
+}
+
+
+
+###### table maker #####
+
+t5tablerounrR = function(R,pf){
+  round = pf %>% filter( Round.Number == R)
+  
+  tab <- round %>%
+    arrange(desc(total_points), desc(total_GD), desc(total_G)) %>%
+    ungroup() %>%        # had to add ungroup() here because it automatically groups by ID_game
+    mutate(Position = row_number()) %>%
+    select(Position,Team,total_points, total_G, total_GC, total_GD)
+  
+  tab
+}
+
+
+
+
+
+######## if we are doing multple seasons ######
+

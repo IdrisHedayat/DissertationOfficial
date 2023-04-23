@@ -1,7 +1,63 @@
-#######  Packages    #######
+#######  Packages  and setting up   #######
 library(INLA)
 library(tidyverse)
 library(readxl)
+
+
+#### source footiemaker #####
+# this is the dataset that is used to create each league's "footie dataset"
+
+source("FootieMaker.R")
+
+#function creates tibble dataframes of the specific league resulting in columns:
+# ID_game: the unique identifier for the game being played
+# Date: the date the game was played
+# Team: A specifc football team involved in each game (there are 2 for each ID_game)
+# Goal: The amount of goals the  team scored in the game
+# Opponent: the team that was the away team in the game
+# League: One of 5 top European Leagues , for instance La Liga
+# Location: the Club who's Venue was  used (e.g if played at Manchester United's venue Old Trafford, Location is just "Manchester Utd")
+# Home: Whether the team in the specific row played at home (=1) or away (=0)
+# Round.Number = The fixture lists has been split into round for simulation ideally by total gameweeks, however some leagues eg premier league have double gameweeks where more than one game is played per gameweek, so more simulations rounds than total gameweeks 
+# points_won: the amount of points obtained by the team (three for a victory, one for a draw, and zero for a defeat).
+# total_points is the cumulative amount of points the team has amassed overall in the league.
+# days_since_last: how many days have passed since the team's last match?
+# diff_point: The number of points that separate the specific team and the opposition of the match. 
+# rel_strength: Relative strength of the team in relation to the opposing team
+# game_number: Amount of games the team has played in the league thus far. 
+# Form: measure of Teams recent performances calculated as a fraction from points obtained and total points possible (15) from  their past 5 games 
+# GC: The total number of league goals that the team has conceded.
+# Goal difference (GD): the  team's overall league goal difference (goals scored minus goals conceded).
+# GDdiff: The goal-difference difference between the team and their opposition
+# total_GC: the total goals the team has allowed in the league thus far total_G: the total goals the  side has scored in the league thus far total_Goal difference (GD): the team's overall league goal difference (goals scored minus goals conceded)
+# GCpg: the teams current average for goals conceded by the team per game.
+# Gpg: the team's overall league average for goals scored per game.
+# rank: where the  team currently stands in the league 
+# diff_rank: The difference in where team stands in relation to the opponent 
+# num:  a unique identifier for each case of game_ID and team collectively, i.e to distinguish between each row.
+
+
+
+######### Source Utilities ##############
+
+source("UtilityFunctions.R")
+
+#above sources the following functions: 
+# time_trend() , "for the RW2 model of over time performance" - doesnt work when i try to run anyways
+# attack_defense() , plot of attack_defence effects
+# team_strength() , shows attack or defence effets of each team depending on what is specified
+# make_scored() ,   Post-processing Used to predict the number of goals scored in.a new game
+# plot_joint() ,  # Plots the joint posterior distributions of all the possible scores
+# outcome_predict() , gives win % predictions for each team specified 
+# joint_marginal() ,  gives the plot of the joint posterior probabilities for specified teams
+# updated_unplayed() ,  extracts the unplayed fixtures for a given round and inputs the most common result ( i think this should instead be inputting just the sample mean of the column of goals scored for the team rounded?)
+# update_footie() , updates the premfootie dataset with the goal predictions
+# var_updater() ,  updates the other variables in the dataset as a result of the goal predictions
+# roundN , does the above 3 for a given round N , e.g round 24
+# datprep() , preps the data as it should be before being using in the inla model
+
+
+
 
 
 
@@ -60,9 +116,6 @@ premsched <- as_tibble(prem2223) %>%
     away_score = AG,
   )
 
-
-#### source footiemaker #####
-source("FootieMaker.R")
 
 
 plfootie = FootieMaker(premsched)
@@ -321,20 +374,29 @@ bundesfootie = FootieMaker(bulisched)
 saveRDS(bundesfootie,"BundesFootie2223.rds")
 
 
-######### Source Utilities ##############
-
-source("UtilityFunctions.R")
 
 
-######### Setting up Modelling ##############
+
+######### Formula ##############
 
 eq = Goal ~ Home + 
+  # diff_point +
+  # diff_rank +
+  # form +
+  # rel_strength +
+  # days_since_last +
+  # Gpg +
+  # GCpg +
+  # GDdiff +
   f(factor(Team), model = "iid") +     # f() is used to define General Gasuain Model in INLA formula
-  f(factor(Opponent), model = "iid") # +
+  f(factor(Opponent), model = "iid")  
 # Time component wek by team to account for difference in time performance
-# f(id_date,model="rw2",replicate=as.numeric(factor(Team))) +
+# f(id_date,model="rw2",replicate=as.numeric(factor(Team))) #+
 # Overdispersion to account for extra goals
-# f(num,model="iid") +
+# f(num,model="iid") 
+
+
+
 
 
 
@@ -376,60 +438,93 @@ t5team_strength(mlaliga,laligafootie,"attack")
 
 t5team_strength(mlaliga,laligafootie,"defense")  
 
+# t5_timetrend now works below, but for some reason teams like real madrid, barca, atletico are decreasing over time ? maybe i have to run with a more full dataset i.e past seasons, or maybe i need to run at the end of this season i.e after gw38 ?
+time_trendt5time_trend(mlaliga,laligafootie)
+
 # Post-processing Used to predict the number of goals scored in.a new game
 
+# 
+# 
+# liga23 = t5make_scored(round=23,dt=laligadata,model=mlaliga,nsims=1000)
+# 
+# 
+# 
+# ligafootie23 = roundN(23,scored = liga23,roundata = laligadata ,prevfootie = laligafootie) 
 
 
-liga23 = t5make_scored(round=23,dt=laligadata,model=mlaliga,nsims=1000)
+####### la liga  Round 24 
+####
+# r=24
+# lldata24 = datprep(ligafoote23,r)
+# 
+# 
+# mliga24=runINLA(formu = eq,dat=lldata24)
+# 
+# t5team_strength(mliga24, lldata24)
+# 
+# liga24 = t5make_scored(round=24,dt=lldata24,model=mliga24,nsims=1000)
+# 
+# ligafootie24 = roundN(24,scored = liga24,roundata = lldata24 ,prevfootie = ligafootie23) 
+
+# the above method can be condensed into a single function that returns all the above: below
 
 
 
-ligafootie23 = roundN(23,scored = liga23,roundata = laligadata ,prevfootie = laligafootie) 
+################################################.
+###### Ninla - trying making it quicker ########
+################################################.
 
 
-####### la liga  Round 24 #######
-r=24
-lldata24 = datprep(ligafootie23,r)
+#### currently only running nsims=100 just to make it quicker for now
+
+#after running roundNinla it returns a list of 3 tibbles: a tbl dataframe (in the function as footieN that is the new footie dataset),
+# a tibble dataframe (rN in function) of the scored predictions from running INLA, 
+# and the model itself (inlam in function) which can be extract if we want to get the team effects at a certain point
 
 
-mliga24=runINLA(formu = eq,dat=lldata24)
 
-t5team_strength(mliga24, lldata24)
+ligafootie23 = roundNinla(23,laligafootie) 
 
-liga24 = t5make_scored(round=24,dt=lldata24,model=mliga24,nsims=1000)
+testscored1 = t5make_scored(23,laligadata,mlaliga,nsims=100)
+#why isnt the above making values instead its a function??
+testmpo = mpo_updated_unplayed(23,laligadata,testscored)
 
-ligafootie24 = roundN(24,scored = liga24,roundata = lldata24 ,prevfootie = ligafootie23) 
+# ligaframe23 = ligafootie23$footieN      # the new footie
+# ligascored23 = ligafootie23$rN       # the new scored predictions
+# ligamodel23 = ligafootie23$inlam        #the new inla model used
 
-####### la liga  Round 25 #######
-r=25
-lldata25 = datprep(ligafootie24,r)
+# summary(mlaliga)
+# summary(ligamodel23)
+
+view(ligafootie23)
+
+ligar24 = roundNinla(24,ligafootie23$footieN) 
+ligar25 = roundNinla(25,ligar24$footieN) 
+ligar26 = roundNinla(26,ligar25$footieN) 
+ligar27 = roundNinla(27,ligar26$footieN) 
+ligar28 = roundNinla(28,ligar27$footieN) 
+ligar29 = roundNinla(29,ligar28$footieN) 
+ligar30 = roundNinla(30,ligar29$footieN) 
+ligar31 = roundNinla(31,ligar30$footieN) 
+ligar32 = roundNinla(32,ligar31$footieN) 
+ligar33 = roundNinla(33,ligar32$footieN) 
+ligar34 = roundNinla(34,ligar33$footieN) 
+ligar35 = roundNinla(35,ligar34$footieN) 
+ligar36 = roundNinla(36,ligar35$footieN) 
+ligar37 = roundNinla(37,ligar36$footieN) 
+ligar38 = roundNinla(38,ligar37$footieN) 
+
+t5team_strength(ligar38$inlam, ligar38$footieN)
+ligar38$inlam
+
+ligar38test = roundNinla(38,laligafootie)
+laligafinaltable = t5tablerounrR(38,ligar38$footieN)
+laligafinaltable
 
 
-mliga25=runINLA(formu = eq,dat=lldata25)
+# la liga works but the model isnt optimal, 
 
-t5team_strength(mliga25, lldata25)
 
-liga25 = t5make_scored(round=25,dt=lldata25,model=mliga25,nsims=1000)
-
-ligafootie25 = roundN(25,scored = liga25,roundata = lldata25 ,prevfootie = ligafootie24) 
-
-###### Ninla - trying making it quicker #######
-roundNinla = function(n,prevfootie){
-  df = datprep(prevfootie,n)
-  
-  
-  inlam = runINLA(formu = eq , dat=df)
-
-  set.seed(2223)
-  
-  rN = make_scored(round=n,dt=df, model = inlam,nsims=1000)
-
-  footieN = roundN(N=n,scored=rN,roundata = df , prevfootie=prevfootie)
-  
-  return(footieN)
-}
-
-ligafootie26 = roundNinla(26,ligafootie25)
 ######### Modelling Ligue 1 ##############
 
 # ligue1 only up to round.number 25
@@ -456,10 +551,27 @@ mligue=inla(formula = eq,
              family="poisson",
              control.predictor=list(compute=TRUE,link=1),
              control.compute=list(config=TRUE,dic=TRUE))
+summary(mligue)
 t5team_strength(mligue,liguefootie)
 
+liguefootie25 = roundNinla(25,liguefootie) 
+liguer26 = roundNinla(26,liguefootie25$footieN) 
+liguer27 = roundNinla(27,liguer26$footieN) 
+liguer28 = roundNinla(28,liguer27$footieN) 
+liguer29 = roundNinla(29,liguer28$footieN) 
+liguer30 = roundNinla(30,liguer29$footieN) 
+liguer31 = roundNinla(31,liguer30$footieN) 
+liguer32 = roundNinla(32,liguer31$footieN) 
+liguer33 = roundNinla(33,liguer32$footieN) 
+liguer34 = roundNinla(34,liguer33$footieN) 
+liguer35 = roundNinla(35,liguer34$footieN) 
+liguer36 = roundNinla(36,liguer35$footieN) 
+liguer37 = roundNinla(37,liguer36$footieN) 
+liguer38 = roundNinla(38,liguer37$footieN) 
 
 
+ligue1finaltable = t5tablerounrR(38,liguer38$footieN)
+ligue1finaltable
 
 ######### Modelling Serie A ##############
 
@@ -487,9 +599,28 @@ mserie=inla(formula = eq,
             family="poisson",
             control.predictor=list(compute=TRUE,link=1),
             control.compute=list(config=TRUE,dic=TRUE))
-t5team_strength(mserie,seriefootie)
+summary(mserie)
+t5team_strength(mserie,seriefootie,"defense")
+
+seriefootie24 = roundNinla(24,seriefootie) 
+serier25 = roundNinla(25,seriefootie24$footieN) 
+serier26 = roundNinla(26,serier25$footieN) 
+serier27 = roundNinla(27,serier26$footieN) 
+serier28 = roundNinla(28,serier27$footieN) 
+serier29 = roundNinla(29,serier28$footieN) 
+serier30 = roundNinla(30,serier29$footieN) 
+serier31 = roundNinla(31,serier30$footieN) 
+serier32 = roundNinla(32,serier31$footieN) 
+serier33 = roundNinla(33,serier32$footieN) 
+serier34 = roundNinla(34,serier33$footieN) 
+serier35 = roundNinla(35,serier34$footieN) 
+serier36 = roundNinla(36,serier35$footieN) 
+serier37 = roundNinla(37,serier36$footieN) 
+serier38 = roundNinla(38,serier37$footieN) 
 
 
+serieAfinaltable = t5tablerounrR(38,serier38$footieN)
+serieAfinaltable
 
 
 ######### Modelling Bundesliga ##############
@@ -511,3 +642,22 @@ t5team_strength(mbundes,bundesfootie)
 
 r22bundes = t5make_scored(22,dt= bundesdata, model=mbundes,nsims=1000)
 
+
+
+bundesfootie22 = roundNinla(22,bundesfootie) 
+bundesr23 = roundNinla(23,bundesfootie22$footieN) 
+bundesr24 = roundNinla(24,bundesr23$footieN) 
+bundesr25 = roundNinla(25,bundesr24$footieN) 
+bundesr26 = roundNinla(26,bundesr25$footieN) 
+bundesr27 = roundNinla(27,bundesr26$footieN) 
+bundesr28 = roundNinla(28,bundesr27$footieN) 
+bundesr29 = roundNinla(29,bundesr28$footieN) 
+bundesr30 = roundNinla(30,bundesr29$footieN) 
+bundesr31 = roundNinla(31,bundesr30$footieN) 
+bundesr32 = roundNinla(32,bundesr31$footieN) 
+bundesr33 = roundNinla(33,bundesr32$footieN) 
+bundesr34 = roundNinla(34,bundesr33$footieN) 
+
+
+Bundesligafinaltable = t5tablerounrR(34,bundesr34$footieN)
+Bundesligafinaltable

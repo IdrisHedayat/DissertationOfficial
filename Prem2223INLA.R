@@ -2,6 +2,7 @@ library(INLA)
 library(tidyverse)
 library(readxl)
 
+###### setting up data #######
 # This file is used if we are using the fixture list updated for double game weeks (i.e postponed games)
 prem2223 = read_excel("fbref2223r44.xlsx")
 
@@ -156,13 +157,23 @@ premfootie <- premfootie %>%
 
 ###### There is a problem with calculating rank here, it doesnt accurately monitor league position at the time, perhaps consider an ELO ranking instead ############
 # Calculate rank for each given round.  
-
+# premfootie = premfootie %>%
+#   group_by(game_number) %>%
+#   mutate(rank = dense_rank(desc(total_points))) %>%
+#   ungroup() %>% group_by(ID_game) %>% 
+#   mutate(diff_rank=c(rank[1]-rank[2],rank[2]-rank[1])) %>%
+#   ungroup()
+# 
 premfootie = premfootie %>%
-  group_by(Round.Number) %>%
-  mutate(rank = dense_rank(desc(total_points))) %>%
-  ungroup() %>% group_by(ID_game) %>% 
-  mutate(diff_rank=c(rank[1]-rank[2],rank[2]-rank[1])) %>%
+  group_by(game_number) %>%
+  mutate(rank = min_rank(desc(total_points)) +
+           row_number(desc(total_GD)) / 10000) %>%
+  mutate(rank = dense_rank(rank)) %>%
+  ungroup() %>% 
+  group_by(ID_game) %>%
+  mutate(diff_rank = c(rank[1] - rank[2], rank[2] - rank[1])) %>%
   ungroup()
+
 
 
 ### fine here , idris
@@ -650,11 +661,16 @@ var_updater = function(pf){
   
   # Calculate rank for each given round
   pf = pf %>%
-    group_by(Round.Number) %>%
-    mutate(rank = dense_rank(desc(total_points))) %>%
-    ungroup() %>% group_by(ID_game) %>% 
-    mutate(diff_rank=c(rank[1]-rank[2],rank[2]-rank[1]))  %>%
+    group_by(game_number) %>%
+    mutate(rank = min_rank(desc(total_points)) +
+             row_number(desc(total_GD)) / 10000) %>%
+    mutate(rank = dense_rank(rank)) %>%
+    ungroup() %>% 
+    group_by(ID_game) %>%
+    mutate(diff_rank = c(rank[1] - rank[2], rank[2] - rank[1])) %>%
     ungroup()
+  
+  
     
   return(pf)
 }

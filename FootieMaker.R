@@ -206,15 +206,17 @@ MultiSznFootieMaker = function(sched){
   pf <- pf %>%
     group_by(ID_game) %>%
     mutate(GC = c(Goal[2],Goal[1]),
-           GD = c(as.numeric(Goal[1])-as.numeric(Goal[2]),as.numeric(Goal[2])-as.numeric(Goal[1])),
-           GDdiff = c(GD[1]-GD[2],GD[2]-GD[1])) %>%
+           GD = c(as.numeric(Goal[1])-as.numeric(Goal[2]),as.numeric(Goal[2])-as.numeric(Goal[1]))) %>%
     ungroup() %>% group_by(Team) %>% 
     mutate(total_GC = cumsum(GC),
            total_G = cumsum(Goal),
            total_GD = cumsum(GD),
            GCpg = total_GC/game_number,
            Gpg = total_G / game_number,) %>% ungroup()  %>% 
-    group_by(ID_game) %>% mutate(ID=cur_group_id()) %>% ungroup() 
+    group_by(ID_game) %>% 
+    mutate(ID=cur_group_id(),
+           TGDdiff = c(total_GD[1]-total_GD[2],total_GD[2]-total_GD[1])) %>% 
+    ungroup() 
   
 
   pf = pf %>%

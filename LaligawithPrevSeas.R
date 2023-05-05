@@ -367,3 +367,6 @@ summary(malllaliga)
 t5team_strength(malllaliga,AllLaLiga)
 
 
+
+seriea2122 = presched("seriea2122.xlsx")
+

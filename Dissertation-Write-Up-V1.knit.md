@@ -9,13 +9,7 @@ header-includes:
 ---
 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library("ggdag")
-library("igraph")
-library("tidyverse")
-library("knitr")
-```
+
 
  Planning:
  
@@ -239,22 +233,7 @@ $$att_i \mid \sigma_\alpha ~ Normal(0, \sigma^2_\alpha) \\ and \\ def_i \mid \si
 
 Below is a DAG representatoin of the hierarchical structure of the model at hand
 
-```{r DAG, echo=FALSE, message=FALSE, warning=FALSE}
-my_formula = 
-
-
-dag <- ggdag::dagify(y ~ p,
-                         m ~ d,
-                         y ~ d,
-                         y ~ m)
-# dag %>%
-#   tidy_dagitty() %>%
-#   arange(name) %>%
- 
-ggdag(dag) + theme_dag()
-
-
-```
+![](Dissertation-Write-Up-V1_files/figure-latex/DAG-1.pdf)<!-- --> 
 Having established the  baseline model's formula, we fit the model using the INLA package, again specifying the poisson distribution for he response variable; number of Goals. Before this we prepare the data initially on a single season for each of the leagues. We first fit the model up to round r for prediction, with rounds 1,..., r-1 having been played already. The starting round number r was determined as the next game week at the time of modelling, in the case of the Premier league: 28, La Liga: 23, Ligue 1: 25, Serie A: 24, and Bundesliga: 22.
 
 Referencing [Congdon, 2019] below;
@@ -263,10 +242,25 @@ $$\tilde{\pi}(x_i \mid y_i) = \int \tilde{\pi}(\lambda \mid y)  \tilde{\pi}(x_i 
 
 Using values forminla.summary.random we are able to extract the quantiles of the random effects measuring the teams' attacking and defensive strength. Below is a table showing example values of the effects' quantiles: 
 ##### Formatting needed #######
-```{r example attack def table}
+
+```r
 laligaattdef = readRDS("dissolaligaattdef.RDS")
 
 library(kableExtra)
+```
+
+```
+## 
+## Attaching package: 'kableExtra'
+```
+
+```
+## The following object is masked from 'package:dplyr':
+## 
+##     group_rows
+```
+
+```r
 laligaattdef_df <- data.frame(laligaattdef)
 
 kable(laligaattdef_df, 
@@ -276,26 +270,67 @@ kable(laligaattdef_df,
       align = 'c', 
       caption = "Your table caption") %>%
   kable_styling()
-
-
-
 ```
+
+\begin{table}
+
+\caption{\label{tab:example attack def table}Your table caption}
+\centering
+\begin{tabular}[t]{c|c|c|c|c|c|c|c|c}
+\hline
+Team & Attack Mean & Attack 2.5\% & Attack Median & Attack 97.5\% & Defense Mean & Defense 2.5\% & Defense Median & Defense 97.5\%\\
+\hline
+Almería & 0.0165858 & -0.2442866 & 0.0119552 & 0.2900798 & 0.2605182 & -0.0263106 & 0.2550529 & 0.5872316\\
+\hline
+Athletic Club & 0.0730128 & -0.1692706 & 0.0573021 & 0.3612349 & -0.0630958 & -0.3777389 & -0.0583591 & 0.2355749\\
+\hline
+Atlético Madrid & 0.0678000 & -0.1751912 & 0.0528079 & 0.3537545 & -0.1970099 & -0.5575115 & -0.1861125 & 0.1066024\\
+\hline
+Barcelona & 0.2562312 & -0.0206139 & 0.2544078 & 0.5975623 & -0.4520438 & -0.9504112 & -0.4408945 & -0.0407376\\
+\hline
+Betis & 0.0325754 & -0.2204437 & 0.0240692 & 0.3083492 & -0.0609481 & -0.3755189 & -0.0563188 & 0.2380369\\
+\hline
+Cádiz & -0.1484229 & -0.4895383 & -0.1280458 & 0.1012194 & 0.1585272 & -0.1167629 & 0.1504560 & 0.4736459\\
+\hline
+Celta Vigo & -0.0430518 & -0.3291654 & -0.0326270 & 0.2173067 & 0.1492726 & -0.1269781 & 0.1411888 & 0.4639464\\
+\hline
+Elche & -0.1835821 & -0.5472418 & -0.1643777 & 0.0728908 & 0.3332316 & 0.0239312 & 0.3313689 & 0.6667913\\
+\hline
+Espanyol & 0.0109749 & -0.2509528 & 0.0076827 & 0.2823582 & 0.1419334 & -0.1359064 & 0.1338731 & 0.4568310\\
+\hline
+Getafe & -0.1186305 & -0.4412232 & -0.0984994 & 0.1301768 & 0.0405140 & -0.2497939 & 0.0365224 & 0.3458216\\
+\hline
+Girona & 0.0927870 & -0.1437525 & 0.0755216 & 0.3853525 & 0.1484430 & -0.1298679 & 0.1402905 & 0.4650535\\
+\hline
+Mallorca & -0.1008751 & -0.4138545 & -0.0816367 & 0.1493625 & -0.0943192 & -0.4161951 & -0.0875291 & 0.2024995\\
+\hline
+Osasuna & -0.1202544 & -0.4433080 & -0.1001325 & 0.1282259 & -0.1170141 & -0.4457641 & -0.1089552 & 0.1796874\\
+\hline
+Rayo Vallecano & 0.0329594 & -0.2199748 & 0.0243647 & 0.3088858 & -0.0417472 & -0.3506895 & -0.0387154 & 0.2577195\\
+\hline
+Real Madrid & 0.2835537 & -0.0125882 & 0.2857220 & 0.6354251 & -0.1912204 & -0.5519073 & -0.1802186 & 0.1130000\\
+\hline
+Real Sociedad & 0.0843772 & -0.1547532 & 0.0675793 & 0.3753758 & -0.0811191 & -0.4018317 & -0.0749700 & 0.2175607\\
+\hline
+Sevilla & -0.0262526 & -0.3049172 & -0.0198600 & 0.2377308 & 0.0701400 & -0.2138898 & 0.0642331 & 0.3768571\\
+\hline
+Valencia & -0.0074862 & -0.2761453 & -0.0060062 & 0.2589239 & 0.0160662 & -0.2784914 & 0.0140488 & 0.3186250\\
+\hline
+Valladolid & -0.1693333 & -0.5224280 & -0.1496956 & 0.0828229 & 0.0735951 & -0.2102729 & 0.0675328 & 0.3807898\\
+\hline
+Villarreal & -0.0319555 & -0.3119273 & -0.0242798 & 0.2300265 & -0.0941439 & -0.4161304 & -0.0873216 & 0.2025661\\
+\hline
+\end{tabular}
+\end{table}
 
 Below are visual representations for the team attack and defense effects for each of the top 5 leagues:
 
-```{r t5 league team_strength plots, echo=FALSE}
-#la liga
-include_graphics("llattdef.png")
-#ligue 1
-include_graphics("plattdef.png")
-#ligue 1
-include_graphics("l1attdef.png")
-#Serie A
-include_graphics("saattdef.png")
-#Bundesliga
-include_graphics("buliattdef.png")
- 
-```
+
+\includegraphics[width=33.33in]{llattdef} 
+\includegraphics[width=33.33in]{plattdef} 
+\includegraphics[width=33.33in]{l1attdef} 
+\includegraphics[width=33.33in]{saattdef} 
+\includegraphics[width=33.33in]{buliattdef} 
 
 
 

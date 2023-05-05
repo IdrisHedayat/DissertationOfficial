@@ -2,6 +2,7 @@
 library(INLA)
 library(tidyverse)
 library(readxl)
+library(gridExtra)
 
 
 #### source footiemaker #####
@@ -65,7 +66,7 @@ source("UtilityFunctions.R")
 
 
 # This file is used if we are using the fixture list updated for double game weeks (i.e postponed games)
-prem2223 = read_excel("fbref2223r44.xlsx")
+prem2223 = read_excel("prem2223raw.xlsx")
 
 # #file with unadjusted gw column.
 # prem2223 <- read_excel("fbref2223.xlsx")
@@ -397,7 +398,36 @@ eq = Goal ~ Home +
 
 
 
+######### Modelling Premier League ##############
 
+r=25
+
+pldata=
+  # Here "fixes" the data
+  plfootie %>% 
+  arrange(date) %>% mutate(
+    form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form),
+    # And scales all the continuous covariates for ease of fitting
+    # diff_point=scale(diff_point,scale=TRUE),
+    # diff_rank=scale(diff_rank,scale=TRUE),
+    # days_since_last=scale(days_since_last,scale=TRUE),
+    id_date=date %>% as.factor() %>% as.numeric()
+  ) %>% 
+  # Then filters only the games in a given round (for prediction)
+  filter(Round.Number%in%c(NA,1:r)) # Here I have changed the code to 1:r to ensure it keeps the updated data too
+
+
+
+
+mprem=inla(formula = eq,
+             data=pldata,
+             family="poisson",
+             control.predictor=list(compute=TRUE,link=1),
+             control.compute=list(config=TRUE,dic=TRUE))
+summary(mprem)
+t5team_strength(mprem,plfootie,"attack")  
+
+t5team_strength(mprem,plfootie,"defense")  
 
 
 
@@ -438,6 +468,45 @@ t5team_strength(mlaliga,laligafootie,"attack")
 
 t5team_strength(mlaliga,laligafootie,"defense")  
 
+# t5team_strength_table = function(m, pf, effect = "attack") {
+#   options(dplyr.show_progress = FALSE)
+#   ii = pf %>% mutate(Team2 = Team, Team = factor(Team)) %>% mutate(Team = as.numeric(Team)) %>%
+#     filter(date >= "2021-06-11") %>% select(ID, date, Team2, Team, everything()) %>% with(unique(Team))
+#   labs = (pf %>% with(levels(as.factor(Team))))[sort(ii)]
+#   
+#   if (effect == "attack") {
+#     result = (m$summary.random$`factor(Team)` %>% as_tibble() %>% filter(ID %in% labs) %>%
+#                 mutate(Mean = mean, `2.5%` = `0.025quant`, `97.5%` = `0.975quant`)) %>%
+#       select(Team = `ID`, attack, attack025, attack975)
+#   }
+#   if (effect == "defense") {
+#     result = (m$summary.random$`factor(Opponent)` %>% as_tibble() %>% filter(ID %in% labs) %>%
+#                 mutate(defense = mean, defense025 = `0.025quant`, defense975 = `0.975quant`)) %>%
+#       select(Team = `ID`, defense, defense025, defense975)
+#   }
+#   return(result)
+# }
+
+t5team_strength_table = function(m, pf) {
+  options(dplyr.show_progress = FALSE)
+  ii = pf %>% mutate(Team2 = Team, Team = factor(Team)) %>% mutate(Team = as.numeric(Team)) %>%
+    filter(date >= "2021-06-11") %>% select(ID, date, Team2, Team, everything()) %>% with(unique(Team))
+  labs = (pf %>% with(levels(as.factor(Team))))[sort(ii)]
+  
+  attack_summary = (m$summary.random$`factor(Team)` %>% as_tibble() %>% filter(ID %in% labs) %>%
+                      mutate(attaean = mean, attack025 = `0.025quant`, attack_median = `0.5quant`, attack975 = `0.975quant`)) %>%
+    select(Team = `ID`, attack_mean, attack025, attack_median, attack975)
+  
+  defense_summary = (m$summary.random$`factor(Opponent)` %>% as_tibble() %>% filter(ID %in% labs) %>%
+                       mutate(defense_mean = mean, defense025 = `0.025quant`, defense_median = `0.5quant`, defense975 = `0.975quant`)) %>%
+    select(Team = `ID`, defense_mean, defense025, defense_median, defense975)
+  
+  result = left_join(attack_summary, defense_summary, by = "Team")
+  return(result)
+}
+
+dissolaligaattdef = t5team_strength_table(mlaliga,laligafootie)
+saveRDS(dissolaligaattdef, "dissolaligaattdef.RDS")
 # t5_timetrend now works below, but for some reason teams like real madrid, barca, atletico are decreasing over time ? maybe i have to run with a more full dataset i.e past seasons, or maybe i need to run at the end of this season i.e after gw38 ?
 time_trendt5time_trend(mlaliga,laligafootie)
 
@@ -484,6 +553,8 @@ time_trendt5time_trend(mlaliga,laligafootie)
 
 
 ligafootie23 = roundNinla(23,laligafootie) 
+
+
 
 testscored1 = t5make_scored(23,laligadata,mlaliga,nsims=100)
 #why isnt the above making values instead its a function??
@@ -599,7 +670,16 @@ mserie=inla(formula = eq,
             family="poisson",
             control.predictor=list(compute=TRUE,link=1),
             control.compute=list(config=TRUE,dic=TRUE))
-summary(mserie)
+mseriesum = summary(mserie)
+mseriesum
+
+saveRDS(mseriesum, "mseriesum.rds")
+
+sink("mseriesum.txt")
+print(summary(mserie))
+sink()
+mseriesum$hyperpar
+
 t5team_strength(mserie,seriefootie,"defense")
 
 seriefootie24 = roundNinla(24,seriefootie) 
@@ -644,20 +724,510 @@ r22bundes = t5make_scored(22,dt= bundesdata, model=mbundes,nsims=1000)
 
 
 
-bundesfootie22 = roundNinla(22,bundesfootie) 
-bundesr23 = roundNinla(23,bundesfootie22$footieN) 
-bundesr24 = roundNinla(24,bundesr23$footieN) 
-bundesr25 = roundNinla(25,bundesr24$footieN) 
-bundesr26 = roundNinla(26,bundesr25$footieN) 
-bundesr27 = roundNinla(27,bundesr26$footieN) 
-bundesr28 = roundNinla(28,bundesr27$footieN) 
-bundesr29 = roundNinla(29,bundesr28$footieN) 
-bundesr30 = roundNinla(30,bundesr29$footieN) 
-bundesr31 = roundNinla(31,bundesr30$footieN) 
-bundesr32 = roundNinla(32,bundesr31$footieN) 
-bundesr33 = roundNinla(33,bundesr32$footieN) 
-bundesr34 = roundNinla(34,bundesr33$footieN) 
+bundesfootie22 = roundNinlampo(22,bundesfootie) 
+bundesr23 = roundNinlampo(23,bundesfootie22$footieN) 
+bundesr24 = roundNinlampo(24,bundesr23$footieN) 
+bundesr25 = roundNinlampo(25,bundesr24$footieN) 
+bundesr26 = roundNinlampo(26,bundesr25$footieN) 
+bundesr27 = roundNinlampo(27,bundesr26$footieN) 
+bundesr28 = roundNinlampo(28,bundesr27$footieN) 
+bundesr29 = roundNinlampo(29,bundesr28$footieN) 
+bundesr30 = roundNinlampo(30,bundesr29$footieN) 
+bundesr31 = roundNinlampo(31,bundesr30$footieN) 
+bundesr32 = roundNinlampo(32,bundesr31$footieN) 
+bundesr33 = roundNinlampo(33,bundesr32$footieN) 
+bundesr34 = roundNinlampo(34,bundesr33$footieN) 
 
 
 Bundesligafinaltable = t5tablerounrR(34,bundesr34$footieN)
 Bundesligafinaltable
+
+saveRDS(Bundesligafinaltable, "bulibaselinetableMPO")
+
+
+###### plots for dissertation #####
+
+
+## attack and defense plots
+
+llattplot = t5team_strength(mlaliga,laligafootie,"attack") + ylab("Teams")
+lldefplot = t5team_strength(mlaliga,laligafootie,"defense") + ylab("Teams")
+llattdef = grid.arrange(llattplot,lldefplot,ncol=2) 
+ggsave("llattdef.png",llattdef,width = 8, height = 4, dpi = 300)
+
+
+lljoinedattdef = t5attack_defense(mlaliga,laligafootie)
+ggsave("joinedllattdef.png",lljoinedattdef,width = 8, height = 4, dpi = 300)
+
+l1attplot = t5team_strength(mligue,liguefootie,"attack") + ylab("Teams")
+l1defplot = t5team_strength(mligue,liguefootie,"defense") + ylab("Teams")
+l1attdef = grid.arrange(l1attplot,l1defplot,ncol=2) 
+ggsave("l1attdef.png",l1attdef,width = 8, height = 4, dpi = 300)
+
+
+
+saattplot = t5team_strength(mserie,seriefootie,"attack") + ylab("Teams")
+sadefplot = t5team_strength(mserie,seriefootie,"defense") + ylab("Teams")
+saattdef = grid.arrange(saattplot,sadefplot,ncol=2) 
+ggsave("saattdef.png",saattdef,width = 8, height = 4, dpi = 300)
+ 
+
+buliattplot = t5team_strength(mbundes,bundesfootie,"attack") + ylab("Teams")
+bulidefplot = t5team_strength(mbundes,bundesfootie,"defense") + ylab("Teams")
+buliattdef = grid.arrange(buliattplot,bulidefplot,ncol=2) 
+ggsave("buliattdef.png",buliattdef,width = 8, height = 4, dpi = 300)
+
+
+plattplot = t5team_strength(mprem,plfootie,"attack") + ylab("Teams")
+pldefplot = t5team_strength(mprem,plfootie,"defense") + ylab("Teams")
+plattdef = grid.arrange(plattplot,pldefplot,ncol=2) 
+ggsave("plattdef.png",plattdef,width = 8, height = 4, dpi = 300)
+
+
+
+# 
+# t5attdef = grid.arrange(llattplot,lldefplot,plattplot,pldefplot,l1attplot,l1defplot,saattplot,sadefplot,buliattplot,bulidefplot, ncol=2)
+# ggsave("t5attdef.png",t5attdef, height = 40, width=40)
+
+
+## example of simulation
+#### 
+
+
+testscored1 = t5make_scored(23,laligadata,mlaliga,nsims=1000)
+mpotablexample = testscored1 %>% with(table(.[[5]],.[[6]])) %>% prop.table() %>%
+  as_tibble(.name_repair = ~vctrs::vec_as_names(c("Cadiz","Rayo Vallecano","prop"),quiet=TRUE)) %>%
+  mutate(across(where(is.character),as.numeric))
+
+
+# mpo_updated_unplayed = function(N,roundata, scored) {
+  
+  gwNuTEST = laligadata %>% filter(is.na(Goal) & (Round.Number == 23))
+  
+  # for(i in 1:nrow(gwNu)) {
+    # Extract the home and away teams for the i-th row
+    gwNteam = as.character(gwNuTEST[g, "Team"])
+    gwNopponent = as.character(gwNuTEST[g, "Opponent"])
+    
+    extractdataTEST = testscored1 %>% with(table(.[[gwNteam]],.[[gwNopponent]])) %>% prop.table() %>%
+     as_tibble(.name_repair = ~vctrs::vec_as_names(c(gwNteam,gwNopponent,"n"),quiet=TRUE)) 
+    #  mutate(across(where(is.character),as.numeric))
+    
+    max_row_index = which.max(extractdataTEST$n)
+    max_row = extractdataTEST[max_row_index, ]
+    
+    # Extract the predicted goals for the home and away teams from the most likely result "max_row"
+    team_goals = max_row[1]
+    # away_goals = max_row[2] turns out this not needed since we are doing specific team rows in order
+    as.
+    gwNuTEST$Goal[1] = as.numeric(team_goals)
+    view(gwNuTEST)
+    
+  # }
+  
+  return(gwNu %>% select(ID_game, Team, Goal, Opponent,num))
+# }
+
+    
+    
+### example of most probable outcome table
+mpotablexample = mpotablexample %>% arrange(desc(prop))
+mpotablexample 
+
+saveRDS(mpotablexample, "Example MPO Table")
+
+joint_marginal()
+### example joint_marginal
+cadizvallecanojm = joint_marginal("Cádiz","Rayo Vallecano", testscored1)
+ggsave("CadizVallecanoJM.png",cadizvallecanojm, height = 6, width = 6)
+
+
+
+#### comparing models, example bundesliga ####
+
+
+
+
+
+
+
+  
+fbuli1  =  formulacomp = Goal ~ Home + rel_strength + f(factor(Team), model = "iid") +    f(factor(Opponent), model = "iid")      
+
+mbundes1=inla(formula = fbuli1,
+             data= bundesdata,
+             family = "poisson",
+             control.predictor=list(compute=TRUE,link=1),
+             control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
+
+mbundes1$waic$waic
+mbundes1$dic$dic
+
+fbuli2  =  formulacomp = Goal ~ Home + diff_rank + f(factor(Team), model = "iid") +    f(factor(Opponent), model = "iid")      
+mbundes2=inla(formula = formulacomp,
+              data= bundesdata,
+              family = "poisson",
+              control.predictor=list(compute=TRUE,link=1),
+              control.compute=list(config=TRUE,dic=TRUE))
+# etc.. (maybe too long)
+
+
+# Compute all possible combinations of covariates
+library(gtools)
+
+covariates = list("rel_strength",
+                  "diff_rank",
+                  "form",
+                  "days_since_last",
+                  "Gpg",
+                  "GCpg",
+                  "GDdiff")
+
+# Generate all possible combinations of covariates
+all_combinations <- list()
+for (i in 1:length(covariates)) {
+  all_combinations[[i]] <- combn(covariates, i, simplify = FALSE)
+}
+
+all_combinations <- unlist(all_combinations, recursive = FALSE)
+
+allcomb = all_combinations
+### there are therfore 127 possible combinations:
+
+
+# doing it in chunks of 10 instead of all 127 at once
+
+
+# Number of combinations to run at once
+chunk_size <- 10
+
+# Number of chunks
+num_chunks <- ceiling(length(all_combinations) / chunk_size)
+
+# Fit the models and calculate WAIC
+waic_values <- list()
+
+for (chunk in 1:num_chunks) {
+  start_index <- (chunk - 1) * chunk_size + 1
+  end_index <- min(chunk * chunk_size, length(all_combinations))
+  
+  for (i in start_index:end_index) {
+    covariate_formula <- paste(all_combinations[[i]], collapse = " + ")
+    current_formula <- paste("Goal ~ Home +", covariate_formula, "+ f(factor(Team), model = 'iid') + f(factor(Opponent), model = 'iid')")
+    current_model <- inla(
+      formula = as.formula(current_formula),
+      data = bundesdata,
+      family = "poisson",
+      control.predictor = list(compute = TRUE, link = 1),
+      control.compute = list(config = TRUE, dic = TRUE, waic = TRUE)
+    )
+    waic_values[[paste(current_formula)]] <- current_model$waic$waic
+  }
+  
+  # Save the results for the current chunk
+  saveRDS(waic_values, paste0("waic_values_chunk_", chunk, ".rds"))
+  
+  # Clear the waic_values list for the next chunk
+  waic_values <- list()
+}
+
+# Combine the results from all chunks
+waic_values_combined <- list()
+for (chunk in 1:num_chunks) {
+  waic_values_combined <- c(waic_values_combined, readRDS(paste0("waic_values_chunk_", chunk, ".rds")))
+}
+
+sorted_waic_values <- waic_values_combined[order(unlist(waic_values_combined))]
+
+# Select the top 10 models
+top_10_models <- head(sorted_waic_values, 10)
+
+# Create a data frame with the formulas and WAIC values
+top_10_models_df <- data.frame(
+  Formula = names(top_10_models),
+  WAIC = unlist(top_10_models),
+  stringsAsFactors = FALSE
+)
+
+top_10_models = as.tibble(top_10_models_df)
+
+saveRDS(top_10_models,"Top10Models.rds")
+
+
+top_10_models2 = top_10_models
+
+new_names = c("Home+ diff_rank + Gpg + GCpg + GDdiff + Att + Def",
+              "Home + Gpg + GCpg + GDdiff + Att + Def",
+              "Home + diff_rank + days_since_last + Gpg + GCpg + GDdiff + Att + Def",
+              "Home + diff_rank + form + Gpg + GCpg + GDdiff + Att + Def",
+              "Home + form + Gpg + GCpg + GDdiff + Att + Def",
+              "Home + rel_strength + diff_rank + Gpg + GCpg + GDdiff + Att + Def",
+              "Home + rel_strength + Gpg + GCpg + GDdiff + Att + Def",
+              "Home + rel_strength + form + Gpg + GCpg + GDdiff + Att + Def",
+              "Home + days_since_last + Gpg + GCpg + GDdiff + Att + Def",
+              "Home + diff_rank + form + days_since_last + Gpg + GCpg + GDdiff + Att + Def")
+
+top_10_models2 = top_10_models2 %>% rename(Formulae = Formula)
+
+top_10_models2$Formulae = new_names 
+top_10_models2$WAIC = round(top_10_models2$WAIC, 3)
+
+saveRDS(top_10_models2,"Top10Models2.rds")
+
+
+
+OpFormula = Home + diff_rank + Gpg + GCpg + GDdiff + 
+  f(factor(Team), model = "iid") +    
+  f(factor(Opponent), model = "iid")  
+
+
+OFtc = Goal ~ Home + diff_rank + Gpg + GCpg + GDdiff + 
+  f(factor(Team), model = "iid") +    
+  f(factor(Opponent), model = "iid")  +
+# Time component wek by team to account for difference in time performance
+ f(id_date,model="rw2",replicate=as.numeric(factor(Team))) #+
+# Overdispersion to account for extra goals
+# f(num,model="iid") 
+
+
+OFo = Goal ~  Home + diff_rank + Gpg + GCpg + GDdiff + 
+  f(factor(Team), model = "iid") +    
+  f(factor(Opponent), model = "iid")  +
+  # Time component wek by team to account for difference in time performance
+  # f(id_date,model="rw2",replicate=as.numeric(factor(Team))) #+
+# Overdispersion to account for extra goals 
+  f(num,model="iid") 
+
+
+OFtco = Goal ~  Home + diff_rank + Gpg + GCpg + GDdiff + 
+  f(factor(Team), model = "iid") +    
+  f(factor(Opponent), model = "iid") +
+  # Time component wek by team to account for difference in time performance
+  f(id_date,model="rw2",replicate=as.numeric(factor(Team))) +
+  # Overdispersion to account for extra goals 
+  f(num,model="iid") 
+
+
+mtc = inla(formula = OFtc,
+                data= bundesdata,
+                family = "poisson",
+                control.predictor=list(compute=TRUE,link=1),
+                control.compute=list(config=TRUE,dic=TRUE,waic = TRUE))
+mtc$waic$waic
+# 988.8109
+
+mo = inla(formula = OFo,
+          data= bundesdata,
+          family = "poisson",
+          control.predictor=list(compute=TRUE,link=1),
+          control.compute=list(config=TRUE,dic=TRUE,waic = TRUE))
+mo$waic$waic
+
+mtco = inla(formula = OFtco,
+          data= bundesdata,
+          family = "poisson",
+          control.predictor=list(compute=TRUE,link=1),
+          control.compute=list(config=TRUE,dic=TRUE,waic = TRUE))
+mtco$waic$waic
+
+
+####### Model validation ######
+
+#### trying serie a with the optimal vs baseline model (optimal model based on bundesliga so maybe thats why it performs worse?)
+# we consider the Serie A 21-22 season for model validation, using the optimal model and baseline models:
+# we remove data only keeping the first half
+seriea2122 = presched("seriea2122.xlsx")
+
+VenueHome(seriea2122)
+
+serie2122sched <- as_tibble(seriea2122) %>% 
+  rename(
+    Location = Venue
+  ) %>% 
+  mutate(
+    Date=as.Date(Date, format = "%d/%m/%Y"),
+    tournament="Bundesliga",
+    HG = as.numeric(HG),
+    AG = as.numeric(AG),
+    ID_game=row_number(),
+    Location=case_when(
+      Location=="Stadio Atleti Azzurri d'Italia"~"Atalanta", 
+      Location=="Stadio Renato Dall'Ara"~"Bologna", 
+      Location=="Unipol Domus"~"Cagliari", 
+      Location=="Stadio Carlo Castellani"~"Empoli",
+      Location=="Stadio Artemio Franchi"~"Fiorentina", 
+      Location=="Stadio Comunale Luigi Ferraris"~"Genoa", 
+      Location=="Stadio Marc'Antonio Bentegodi"~"Hellas Verona", 
+      Location=="Stadio Giuseppe Meazza" & Home == "Inter" ~"Inter", 
+      Location=="Allianz Stadium"~"Juventus", 
+      Location=="Stadio Olimpico" & Home == "Lazio"~"Lazio", 
+      Location=="Stadio Giuseppe Meazza" & Home == "Milan" ~"Milan", 
+      Location=="Stadio Diego Armando Maradona"~"Napoli", 
+      Location=="Stadio Olimpico" & Home == "Roma" ~"Roma", 
+      Location=="Stadio Arechi"~"Salernitana", 
+      Location=="Stadio Comunale Luigi Ferraris"~"Sampdoria", 
+      Location=="Mapei Stadium - Città del Tricolore"~"Sassuolo", 
+      Location=="Stadio Alberto Picco"~"Spezia", 
+      Location=="Stadio Olimpico di Torino"~"Torino", 
+      Location=="Dacia Arena"~"Udinese", 
+      Location=="Stadio Pierluigi Penzo"~"Venezia"
+    )
+  ) %>% rename(
+    home_team = Home,
+    away_team = Away,
+    date=Date,
+    Round.Number = Wk,
+    home_score = HG,
+    away_score = AG,
+  )
+
+
+serie2122footie = FootieMaker(serie2122sched)
+
+
+saveRDS(serie2122footie,"serie2122footie.rds")
+
+
+OpFormula = Goal ~  Home + diff_rank + Gpg + GCpg + GDdiff + 
+  f(factor(Team), model = "iid") +    
+  f(factor(Opponent), model = "iid")  
+
+
+r=20
+
+serie2122data=
+  # Here "fixes" the data
+  serie2122footie %>% 
+  arrange(date) %>% mutate(
+    form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form),
+    # And scales all the continuous covariates for ease of fitting
+    # diff_point=scale(diff_point,scale=TRUE),
+    # diff_rank=scale(diff_rank,scale=TRUE),
+    # days_since_last=scale(days_since_last,scale=TRUE),
+    id_date=date %>% as.factor() %>% as.numeric()
+  ) %>% 
+  # Then filters only the games in a given round (for prediction)
+  filter(Round.Number%in%c(NA,1:r)) # Here I have changed the code to 1:r to ensure it keeps the updated data too
+
+
+
+mserie2122=inla(formula = OpFormula,
+            data=serie2122data,
+            family="poisson",
+            control.predictor=list(compute=TRUE,link=1),
+            control.compute=list(config=TRUE,dic=TRUE))
+mserie2122sum = summary(mserie2122)
+mserie2122sum
+
+saveRDS(mserie2122sum, "mserie2122sum.rds")
+
+
+
+t5team_strength(mserie2122,serie2122footie,"attack")
+
+bserie2122footie20 = roundNinlampo(20,serie2122footie,frm = eq)
+bserie2122r21 = roundNinlampo(21,bserie2122footie20$footieN,frm = eq)
+bserie2122r22 = roundNinlampo(22,bserie2122r21$footieN,frm = eq)
+bserie2122r23 = roundNinlampo(23,bserie2122r22$footieN,frm = eq)
+bserie2122r24 = roundNinlampo(24,bserie2122r23$footieN,frm = eq)
+bserie2122r25 = roundNinlampo(25,bserie2122r24$footieN,frm = eq) 
+bserie2122r26 = roundNinlampo(26,bserie2122r25$footieN,frm = eq) 
+bserie2122r27 = roundNinlampo(27,bserie2122r26$footieN,frm = eq) 
+bserie2122r28 = roundNinlampo(28,bserie2122r27$footieN,frm = eq) 
+bserie2122r29 = roundNinlampo(29,bserie2122r28$footieN,frm = eq) 
+bserie2122r30 = roundNinlampo(30,bserie2122r29$footieN,frm = eq) 
+bserie2122r31 = roundNinlampo(31,bserie2122r30$footieN,frm = eq) 
+bserie2122r32 = roundNinlampo(32,bserie2122r31$footieN,frm = eq) 
+bserie2122r33 = roundNinlampo(33,bserie2122r32$footieN,frm = eq) 
+bserie2122r34 = roundNinlampo(34,bserie2122r33$footieN,frm = eq) 
+bserie2122r35 = roundNinlampo(35,bserie2122r34$footieN,frm = eq) 
+bserie2122r36 = roundNinlampo(36,bserie2122r35$footieN,frm = eq) 
+bserie2122r37 = roundNinlampo(37,bserie2122r36$footieN,frm = eq) 
+bserie2122r38 = roundNinlampo(38,bserie2122r37$footieN,frm = eq) 
+
+
+serie2122Afinaltablebaseline = t5tablerounrR(38,bserie2122r38$footieN)
+serie2122Afinaltablebaseline
+saveRDS(serie2122Afinaltablebasine, "serie2122AfinaltableOPFORM.rds" )
+
+
+### using baselien
+serie2122footie20 = roundNinlampo(20,serie2122footie,frm=Opformula)
+serie2122r21 = roundNinlampo(21,serie2122footie20$footieN,frm=Opformula)
+serie2122r22 = roundNinlampo(22,serie2122r21$footieN,frm=Opformula)
+serie2122r23 = roundNinlampo(23,serie2122r22$footieN,frm=Opformula)
+serie2122r24 = roundNinlampo(24,serie2122r23$footieN,frm=Opformula)
+serie2122r25 = roundNinlampo(25,serie2122r24$footieN,frm=Opformula) 
+serie2122r26 = roundNinlampo(26,serie2122r25$footieN,frm=Opformula) 
+serie2122r27 = roundNinlampo(27,serie2122r26$footieN,frm=Opformula) 
+serie2122r28 = roundNinlampo(28,serie2122r27$footieN,frm=Opformula) 
+serie2122r29 = roundNinlampo(29,serie2122r28$footieN,frm=Opformula) 
+serie2122r30 = roundNinlampo(30,serie2122r29$footieN,frm=Opformula) 
+serie2122r31 = roundNinlampo(31,serie2122r30$footieN,frm=Opformula) 
+serie2122r32 = roundNinlampo(32,serie2122r31$footieN,frm=Opformula) 
+serie2122r33 = roundNinlampo(33,serie2122r32$footieN,frm=Opformula) 
+serie2122r34 = roundNinlampo(34,serie2122r33$footieN,frm=Opformula) 
+serie2122r35 = roundNinlampo(35,serie2122r34$footieN,frm=Opformula) 
+serie2122r36 = roundNinlampo(36,serie2122r35$footieN,frm=Opformula) 
+serie2122r37 = roundNinlampo(37,serie2122r36$footieN,frm=Opformula) 
+serie2122r38 = roundNinlampo(38,serie2122r37$footieN,frm=Opformula) 
+
+
+serie2122AfinaltableOPFORM = t5tablerounrR(38,serie2122r38$footieN)
+serie2122AfinaltableOPFORM
+saveRDS(serie2122AfinaltableOPFORM, "serie2122AfinaltableOPFORM.rds" )
+
+
+
+######  reading table observed output
+
+sa2122tab = read_excel("sa2122tab.xlsx") %>%
+  as.tibble() %>%
+  mutate(total_points = Pts,
+         Team = Squad) %>%
+  select(Team, total_points) %>%
+  arrange(Team)
+
+sa2122OPFORM = serie2122AfinaltableOPFORM %>%
+  select(Team, total_points) %>%
+  arrange(Team)
+
+sa2122baseline = serie2122Afinaltablebaseline %>%
+  select(Team, total_points) %>%
+  arrange(Team)
+
+
+# Calculate points difference for baseline model
+sa2122baseline$Points_Difference <- abs(sa2122baseline$total_points - sa2122tab$total_points)
+
+# Calculate points difference for optimized model
+sa2122OPFORM$Points_Difference <- abs(sa2122OPFORM$total_points - sa2122tab$total_points)
+
+# Combine the results
+comparison_table <- data.frame(
+  Team = sa2122tab$Team,
+  Observed_Points = sa2122tab$total_points,
+  Baseline_Points = sa2122baseline$total_points,
+  Baseline_Difference = sa2122baseline$Points_Difference,
+  Optimized_Points = sa2122OPFORM$total_points,
+  Optimized_Difference = sa2122OPFORM$Points_Difference
+) 
+
+# Print the comparison
+print(comparison_table)
+comptab=as.tibble(comparison_table)
+saveRDS(comptab, "comptabsa2122")
+
+# Calculate the sum of squared differences for the baseline model
+sum_sq_diff_baseline <- sum(sa2122baseline$Points_Difference ^ 2)
+
+# Calculate the sum of squared differences for the optimized model
+sum_sq_diff_optimized <- sum(sa2122OPFORM$Points_Difference ^ 2)
+
+# Print the results
+cat("Mean squared error for the baseline model:", sum_sq_diff_baseline/20, "\n")
+cat("Mean squared error for the optimized model:", sum_sq_diff_optimized/20, "\n")
+
+
+
+##### buli model validation ####

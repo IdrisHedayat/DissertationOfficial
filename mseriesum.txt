@@ -1,0 +1,50 @@
+
+Call:
+   c("inla.core(formula = formula, family = family, contrasts = 
+   contrasts, ", " data = data, quantiles = quantiles, E = E, offset 
+   = offset, ", " scale = scale, weights = weights, Ntrials = 
+   Ntrials, strata = strata, ", " lp.scale = lp.scale, 
+   link.covariates = link.covariates, verbose = verbose, ", " lincomb 
+   = lincomb, selection = selection, control.compute = 
+   control.compute, ", " control.predictor = control.predictor, 
+   control.family = control.family, ", " control.inla = control.inla, 
+   control.fixed = control.fixed, ", " control.mode = control.mode, 
+   control.expert = control.expert, ", " control.hazard = 
+   control.hazard, control.lincomb = control.lincomb, ", " 
+   control.update = control.update, control.lp.scale = 
+   control.lp.scale, ", " control.pardiso = control.pardiso, 
+   only.hyperparam = only.hyperparam, ", " inla.call = inla.call, 
+   inla.arg = inla.arg, num.threads = num.threads, ", " 
+   blas.num.threads = blas.num.threads, keep = keep, 
+   working.directory = working.directory, ", " silent = silent, 
+   inla.mode = inla.mode, safe = FALSE, debug = debug, ", " 
+   .parent.frame = .parent.frame)") 
+Time used:
+    Pre = 4.02, Running = 0.572, Post = 0.217, Total = 4.81 
+Fixed effects:
+             mean    sd 0.025quant 0.5quant 0.975quant  mode kld
+(Intercept) 0.088 0.092     -0.096    0.089      0.265 0.091   0
+Home        0.213 0.083      0.050    0.213      0.376 0.213   0
+
+Random effects:
+  Name	  Model
+    factor(Team) IID model
+   factor(Opponent) IID model
+
+Model hyperparameters:
+                                 mean     sd 0.025quant 0.5quant
+Precision for factor(Team)      15.38   7.81       5.39    13.70
+Precision for factor(Opponent) 205.86 405.98      18.49    99.45
+                               0.975quant  mode
+Precision for factor(Team)          35.26 10.89
+Precision for factor(Opponent)    1083.29 39.83
+
+Deviance Information Criterion (DIC) ...............: 1282.81
+Deviance Information Criterion (DIC, saturated) ....: 480.60
+Effective number of parameters .....................: 16.25
+
+Marginal log-Likelihood:  -662.80 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
+

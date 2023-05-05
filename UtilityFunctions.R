@@ -188,7 +188,7 @@ joint_marginal=function(x,y,scored,result=NULL,...) {
 }
 
 
-########## updated_unplayed if its using the most probable joint outcome #########
+########## mpo_updated_unplayed if its using the most probable joint outcome #########
 
 mpo_updated_unplayed = function(N,roundata, scored) {
 
@@ -196,8 +196,8 @@ mpo_updated_unplayed = function(N,roundata, scored) {
   
   for(i in 1:nrow(gwNu)) {
     # Extract the home and away teams for the i-th row
-    gwNteam = gwNu[i, "Team"]
-    gwNopponent = gwNu[i+1, "Team"]
+    gwNteam = as.character(gwNu[i, "Team"])
+    gwNopponent = as.character(gwNu[i, "Opponent"])
     
     extractdata = scored %>% with(table(.[[gwNteam]],.[[gwNopponent]])) %>% prop.table() %>%
           as_tibble(.name_repair = ~vctrs::vec_as_names(c(gwNteam,gwNopponent,"n"),quiet=TRUE)) %>%
@@ -210,7 +210,7 @@ mpo_updated_unplayed = function(N,roundata, scored) {
     team_goals = max_row[1]
     # away_goals = max_row[2] turns out this not needed since we are doing specific team rows in order
          
-    gwNu$Goal[i] = team_goals
+    gwNu$Goal[i] = as.numeric(team_goals)
     
     
   }
@@ -334,6 +334,14 @@ roundN = function(N,scored,roundata,prevfootie){
 }
 
 
+#roundNmpo
+roundNmpo = function(N,scored,roundata,prevfootie){
+  gwNU = mpo_updated_unplayed(N,roundata,scored)
+  footiep1 = update_footie(gwNU, prevfootie)
+  footiep2 = var_updater(footiep1)
+  footiep2
+}
+
 
 
 
@@ -444,16 +452,15 @@ t5make_scored=function(round,dt,model,nsims=1000) {
   theta.pred=theta.pred %>% as_tibble()
   # Predictions from the posterior distribution for the number of goals scored
   scored=theta.pred %>% mutate(across(everything(),~rpois(nrow(theta.pred),.)))
-  
-  
+}
   
   ##### Ninla #####
   
-roundNinla = function(n,prevfootie){
+roundNinla = function(n,prevfootie,frm){
     df = datprep(prevfootie,n)
     
     
-    inlam = runINLA(formu = eq , dat=df)
+    inlam = runINLA(formu  =  frm, dat=df)
     
     set.seed(2223)
     
@@ -462,10 +469,23 @@ roundNinla = function(n,prevfootie){
     footieN = roundN(N=n,scored=rN,roundata = df , prevfootie=prevfootie)
     
     list(footieN = footieN, rN = rN, inlam = inlam)
-  
   }
-}
 
+
+roundNinlampo = function(n,prevfootie,frm){
+  df = datprep(prevfootie,n)
+  
+  
+  inlam = runINLA(formu = frm , dat=df)
+  
+  set.seed(2223)
+  
+  rN = make_scored(round=n,dt=df, model = inlam,nsims=100)
+  
+  footieN = roundNmpo(N=n,scored=rN,roundata = df , prevfootie=prevfootie)
+  
+  list(footieN = footieN, rN = rN, inlam = inlam)
+}
 
 
 ###### trying to do t5time_trend ######

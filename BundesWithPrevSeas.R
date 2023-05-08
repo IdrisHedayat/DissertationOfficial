@@ -197,47 +197,48 @@ saveRDS(top_10_models,"allbuli_top_10_models.rds")
 
 
 ##### Model Validation With BULI 21-22 HALFWAY SEASON ONLY TRAINING DATA #######
-
-buli2122val = presched("buli2122trainingse.xlsx")
-
-buli2122valsched <- as_tibble(buli2122val) %>% 
-  rename(
-    Location = Venue
-  ) %>% 
-  mutate(
-    Date=as.Date(Date, format = "%d/%m/%Y"),
-    tournament="Bundesliga",
-    HG = as.numeric(HG),
-    AG = as.numeric(AG),
-    ID_game=row_number(),
-    Location=case_when(
-      Location=="Allianz Arena"~"Bayern Munich", 
-      Location=="BayArena"~"Leverkusen", 
-      Location=="Deutsche Bank Park"~"Eint Frankfurt", 
-      Location=="Europa-Park Stadion"~"Freiburg", 
-      Location=="Mercedes-Benz Arena"~"Stuttgart", 
-      Location=="Mewa Arena"~"Mainz 05", 
-      Location=="Olympiastadion Berlin"~"Hertha BSC",
-      Location=="PreZero Arena"~"Hoffenheim", 
-      Location=="Red Bull Arena"~"RB Leipzig",
-      Location=="RheinEnergieSTADION"~"Köln", 
-      Location=="SchücoArena"~"Arminia",
-      Location=="Schwarzwald-Stadion"~"Freiburg", 
-      Location=="Signal Iduna Park"~"Dortmund", 
-      Location=="Sportpark Ronhof Thomas Sommer"~"Greuther Fürth", 
-      Location=="Stadion An der Alten Försterei"~"Union Berlin",
-      Location=="Stadion im Borussia-Park"~"M'Gladbach",
-      Location=="Volkswagen Arena"~"Wolfsburg", 
-      Location=="Vonovia Ruhrstadion"~"Bochum",
-      Location=="WWK Arena"~"Augsburg")
-  ) %>% rename(
-    home_team = Home,
-    away_team = Away,
-    date=Date,
-    Round.Number = Wk,
-    home_score = HG,
-    away_score = AG,
-  )
+#### this is only if we are using 21/22 seasons which doesnt make sense because of overfitting
+# 
+# buli2122val = presched("buli2122trainingse.xlsx")
+# 
+# buli2122valsched <- as_tibble(buli2122val) %>% 
+#   rename(
+#     Location = Venue
+#   ) %>% 
+#   mutate(
+#     Date=as.Date(Date, format = "%d/%m/%Y"),
+#     tournament="Bundesliga",
+#     HG = as.numeric(HG),
+#     AG = as.numeric(AG),
+#     ID_game=row_number(),
+#     Location=case_when(
+#       Location=="Allianz Arena"~"Bayern Munich", 
+#       Location=="BayArena"~"Leverkusen", 
+#       Location=="Deutsche Bank Park"~"Eint Frankfurt", 
+#       Location=="Europa-Park Stadion"~"Freiburg", 
+#       Location=="Mercedes-Benz Arena"~"Stuttgart", 
+#       Location=="Mewa Arena"~"Mainz 05", 
+#       Location=="Olympiastadion Berlin"~"Hertha BSC",
+#       Location=="PreZero Arena"~"Hoffenheim", 
+#       Location=="Red Bull Arena"~"RB Leipzig",
+#       Location=="RheinEnergieSTADION"~"Köln", 
+#       Location=="SchücoArena"~"Arminia",
+#       Location=="Schwarzwald-Stadion"~"Freiburg", 
+#       Location=="Signal Iduna Park"~"Dortmund", 
+#       Location=="Sportpark Ronhof Thomas Sommer"~"Greuther Fürth", 
+#       Location=="Stadion An der Alten Försterei"~"Union Berlin",
+#       Location=="Stadion im Borussia-Park"~"M'Gladbach",
+#       Location=="Volkswagen Arena"~"Wolfsburg", 
+#       Location=="Vonovia Ruhrstadion"~"Bochum",
+#       Location=="WWK Arena"~"Augsburg")
+#   ) %>% rename(
+#     home_team = Home,
+#     away_team = Away,
+#     date=Date,
+#     Round.Number = Wk,
+#     home_score = HG,
+#     away_score = AG,
+#   )
 
 ##### Set seed ######
 set.seed(12345)
@@ -641,7 +642,7 @@ comparison_table <- data.frame(
 # Print the comparison
 print(comparison_table)
 comptab=as.tibble(comparison_table)
-saveRDS(comptab, "comptabbl2122")
+saveRDS(comptab, "bullicomptabbl2122")
 
 # Calculate the sum of squared differences for the baseline model
 sum_sq_diff_baseline <- sum(bl2122baseline$Points_Difference ^ 2)

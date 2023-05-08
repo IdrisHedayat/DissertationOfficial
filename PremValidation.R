@@ -104,7 +104,9 @@ Mallprem=inla(formula = eqB,
 summary(Mallprem)
 # Watanabe-Akaike information criterion (WAIC) ...: 6788.99
 
-t5team_strength(Mallprem,Allprem)
+allpremdef = t5team_strength(Mallprem,Allprem,"defense") + ylab("Teams")
+
+ggsave("allpremdef.png",allpremdef,width = 8, height = 4, dpi = 300)
 
 ##### WAIC COMBOS #####
 
@@ -160,7 +162,7 @@ for (chunk in 1:num_chunks) {
   }
   
   # Save the results for the current chunk
-  saveRDS(waic_values, paste0("llwaic_values_chunk_", chunk, ".rds"))
+  saveRDS(waic_values, paste0("premwaic_values_chunk_", chunk, ".rds"))
   
   # Clear the waic_values list for the next chunk
   waic_values <- list()
@@ -169,7 +171,7 @@ for (chunk in 1:num_chunks) {
 # Combine the results from all chunks
 waic_values_combined <- list()
 for (chunk in 1:num_chunks) {
-  waic_values_combined <- c(waic_values_combined, readRDS(paste0("llwaic_values_chunk_", chunk, ".rds")))
+  waic_values_combined <- c(waic_values_combined, readRDS(paste0("premwaic_values_chunk_", chunk, ".rds")))
 }
 
 sorted_waic_values <- waic_values_combined[order(unlist(waic_values_combined))]

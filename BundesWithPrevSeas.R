@@ -104,8 +104,8 @@ MallBuli=inla(formula = eqB,
 summary(MallBuli)
 # Watanabe-Akaike information criterion (WAIC) ...: 6788.99
 
-t5team_strength(MallBuli,AllBuli)
-
+allbulidef = t5team_strength(MallBuli,AllBuli) +ylab("Teams")
+ggsave("allbulidef.png", allbulidef, width = 8, height = 4, dpi = 300)
 ##### WAIC COMBOS #####
 
 library(gtools)

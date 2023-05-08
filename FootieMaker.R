@@ -8,13 +8,13 @@ presched = function(excelfile){
 
 lvhtable <- function(df) {
   lvh <- data.frame(table(df$Venue, df$Home))
-  lvh <- subset(lvh, Freq != 0)
+  lvh = subset(lvh, Freq != 0) %>%
+    arrange(Var1)
   lvh
 }
 
 VenueHome <- function(df) {
-  lvh <- data.frame(table(df$Venue, df$Home))
-  lvh <- subset(lvh, Freq != 0)
+  lvh = lvhtable(df)
   locations <- paste0("Location==", lvh[, 1], "~" , lvh[, 2])
   locationlist <- paste(locations, collapse = ", ")
   return(locationlist)
@@ -166,6 +166,9 @@ MultiSznFootieMaker = function(sched){
   
   ### Trying to create points won , ' total_points ' to track the points tally, for form etc. as well as the days_since_last variable
   
+  
+  ### create points won , ' total_points ' days_since_last variable
+  
   pf=pf %>% group_by(ID_game) %>% 
     mutate(
       points_won=case_when(
@@ -206,19 +209,18 @@ MultiSznFootieMaker = function(sched){
   pf <- pf %>%
     group_by(ID_game) %>%
     mutate(GC = c(Goal[2],Goal[1]),
-           GD = c(as.numeric(Goal[1])-as.numeric(Goal[2]),as.numeric(Goal[2])-as.numeric(Goal[1]))) %>%
+           GD = c(as.numeric(Goal[1])-as.numeric(Goal[2]),as.numeric(Goal[2])-as.numeric(Goal[1])),
+           GDdiff = c(GD[1]-GD[2],GD[2]-GD[1])) %>%
     ungroup() %>% group_by(Team) %>% 
     mutate(total_GC = cumsum(GC),
            total_G = cumsum(Goal),
            total_GD = cumsum(GD),
            GCpg = total_GC/game_number,
            Gpg = total_G / game_number,) %>% ungroup()  %>% 
-    group_by(ID_game) %>% 
-    mutate(ID=cur_group_id(),
-           TGDdiff = c(total_GD[1]-total_GD[2],total_GD[2]-total_GD[1])) %>% 
-    ungroup() 
+    group_by(ID_game) %>% mutate(ID=cur_group_id()) %>% ungroup() 
   
-
+  
+  
   pf = pf %>%
     group_by(game_number) %>%
     mutate(rank = min_rank(desc(total_points)) +

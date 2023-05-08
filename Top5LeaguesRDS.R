@@ -1231,3 +1231,195 @@ cat("Mean squared error for the optimized model:", sum_sq_diff_optimized/20, "\n
 
 
 ##### buli model validation ####
+
+
+buli2122 = presched("buli2122.xlsx")
+
+
+
+lvhtable(buli2122)
+VenueHome(buli2122)
+
+buli2122sched <- as_tibble(buli2122) %>% 
+  rename(
+    Location = Venue
+  ) %>% 
+  mutate(
+    Date=as.Date(Date, format = "%d/%m/%Y"),
+    tournament="Bundesliga",
+    HG = as.numeric(HG),
+    AG = as.numeric(AG),
+    ID_game=row_number(),
+    Location=case_when(
+      Location=="Allianz Arena"~"Bayern Munich", 
+      Location=="BayArena"~"Leverkusen", 
+      Location=="Deutsche Bank Park"~"Eint Frankfurt", 
+      Location=="Europa-Park Stadion"~"Freiburg", 
+      Location=="Mercedes-Benz Arena"~"Stuttgart", 
+      Location=="Mewa Arena"~"Mainz 05", 
+      Location=="Olympiastadion Berlin"~"Hertha BSC",
+      Location=="PreZero Arena"~"Hoffenheim", 
+      Location=="Red Bull Arena"~"RB Leipzig",
+      Location=="RheinEnergieSTADION"~"Köln", 
+      Location=="SchücoArena"~"Arminia",
+      Location=="Schwarzwald-Stadion"~"Freiburg", 
+      Location=="Signal Iduna Park"~"Dortmund", 
+      Location=="Sportpark Ronhof Thomas Sommer"~"Greuther Fürth", 
+      Location=="Stadion An der Alten Försterei"~"Union Berlin",
+      Location=="Stadion im Borussia-Park"~"M'Gladbach",
+      Location=="Volkswagen Arena"~"Wolfsburg", 
+      Location=="Vonovia Ruhrstadion"~"Bochum",
+      Location=="WWK Arena"~"Augsburg")
+  ) %>% rename(
+    home_team = Home,
+    away_team = Away,
+    date=Date,
+    Round.Number = Wk,
+    home_score = HG,
+    away_score = AG,
+  )
+
+
+buli2122footie = FootieMaker(buli2122sched)
+
+saveRDS(buli2122footie,"buli2122footie.rds")
+
+OpFormula = Goal ~  Home + diff_rank + Gpg + GCpg + GDdiff + 
+  f(factor(Team), model = "iid") +    
+  f(factor(Opponent), model = "iid")  
+
+
+r=23
+
+buli2122data=
+  # Here "fixes" the data
+  buli2122footie %>% 
+  arrange(date) %>% mutate(
+    form=case_when((is.nan(form)|is.infinite(form))~0,TRUE~form),
+    # And scales all the continuous covariates for ease of fitting
+    # diff_point=scale(diff_point,scale=TRUE),
+    # diff_rank=scale(diff_rank,scale=TRUE),
+    # days_since_last=scale(days_since_last,scale=TRUE),
+    id_date=date %>% as.factor() %>% as.numeric()
+  ) %>% 
+  # Then filters only the games in a given round (for prediction)
+  filter(Round.Number%in%c(NA,1:r)) # Here I have changed the code to 1:r to ensure it keeps the updated data too
+
+
+
+mbuli2122=inla(formula = eq,
+                data=buli2122data,
+                family="poisson",
+                control.predictor=list(compute=TRUE,link=1),
+                control.compute=list(config=TRUE,dic=TRUE))
+mbuli2122sum = summary(mbuli2122)
+mbuli2122sum
+
+saveRDS(mbuli2122sum, "mbuli2122sum.rds")
+
+eq
+OpFormula
+
+t5team_strength(mbuli2122,buli2122footie,"attack")
+view(buli2122footie)
+bbuli2122footie23 = roundNinlampo(23,buli2122footie,frm = eq)
+bbuli2122r24 = roundNinlampo(24,bbuli2122footie23$footieN,frm = eq)
+bbuli2122r25 = roundNinlampo(25,bbuli2122r24$footieN,frm = eq) 
+bbuli2122r26 = roundNinlampo(26,bbuli2122r25$footieN,frm = eq) 
+bbuli2122r27 = roundNinlampo(27,bbuli2122r26$footieN,frm = eq) 
+bbuli2122r28 = roundNinlampo(28,bbuli2122r27$footieN,frm = eq) 
+bbuli2122r29 = roundNinlampo(29,bbuli2122r28$footieN,frm = eq) 
+bbuli2122r30 = roundNinlampo(30,bbuli2122r29$footieN,frm = eq) 
+bbuli2122r31 = roundNinlampo(31,bbuli2122r30$footieN,frm = eq) 
+bbuli2122r32 = roundNinlampo(32,bbuli2122r31$footieN,frm = eq) 
+bbuli2122r33 = roundNinlampo(33,bbuli2122r32$footieN,frm = eq) 
+bbuli2122r34 = roundNinlampo(34,bbuli2122r33$footieN,frm = eq) 
+
+
+buli2122finaltablebaseline = t5tablerounrR(34,bbuli2122r34$footieN)
+buli2122finaltablebaseline
+saveRDS(buli2122finaltablebaseline, "buli2122AfinaltableOPFORM.rds" )
+
+
+
+
+### using optimal formula
+
+OpFormula
+
+mbuli2122op=inla(formula = OpFormula,
+               data=buli2122data,
+               family="poisson",
+               control.predictor=list(compute=TRUE,link=1),
+               control.compute=list(config=TRUE,dic=TRUE))
+mbuli2122sumop = summary(mbuli2122op)
+mbuli2122sumop
+
+buli2122footie2 = buli2122footie
+buli2122footie232 = roundNinlampo(23,buli2122footie2,frm=OpFormula)
+buli2122r242 = roundNinlampo(24,buli2122footie232$footieN,frm=OpFormula)
+buli2122r252 = roundNinlampo(25,buli2122r242$footieN,frm=OpFormula) 
+buli2122r262 = roundNinlampo(26,buli2122r252$footieN,frm=OpFormula) 
+buli2122r272 = roundNinlampo(27,buli2122r262$footieN,frm=OpFormula) 
+buli2122r282 = roundNinlampo(28,buli2122r272$footieN,frm=OpFormula) 
+buli2122r292 = roundNinlampo(29,buli2122r282$footieN,frm=OpFormula) 
+buli2122r302 = roundNinlampo(30,buli2122r292$footieN,frm=OpFormula) 
+buli2122r312 = roundNinlampo(31,buli2122r302$footieN,frm=OpFormula) 
+buli2122r322 = roundNinlampo(32,buli2122r312$footieN,frm=OpFormula) 
+buli2122r332 = roundNinlampo(33,buli2122r322$footieN,frm=OpFormula) 
+buli2122r342 = roundNinlampo(34,buli2122r332$footieN,frm=OpFormula) 
+
+buli2122finaltableOPFORM = t5tablerounrR(34,buli2122r342$footieN)
+buli2122finaltableOPFORM
+saveRDS(buli2122finaltableOPFORM, "buli2122AfinaltableOPFORM.rds" )
+
+### Buli Mod Val Results ####
+######  reading table observed output
+
+bl2122tab = read_excel("buli2122tab.xlsx") %>%
+  as.tibble() %>%
+  mutate(total_points = Pts,
+         Team = Squad) %>%
+  select(Team, total_points) %>%
+  arrange(Team)
+
+bl2122OPFORM = buli2122finaltableOPFORM %>%
+  select(Team, total_points) %>%
+  arrange(Team)
+
+bl2122baseline = buli2122finaltablebaseline %>%
+  select(Team, total_points) %>%
+  arrange(Team)
+
+
+# Calculate points difference for baseline model
+bl2122baseline$Points_Difference <- abs(bl2122baseline$total_points - bl2122tab$total_points)
+
+# Calculate points difference for optimized model
+bl2122OPFORM$Points_Difference <- abs(bl2122OPFORM$total_points - bl2122tab$total_points)
+
+# Combine the results
+comparison_table <- data.frame(
+  Team = bl2122tab$Team,
+  Observed_Points = bl2122tab$total_points,
+  Baseline_Points = bl2122baseline$total_points,
+  Baseline_Difference = bl2122baseline$Points_Difference,
+  Optimized_Points = bl2122OPFORM$total_points,
+  Optimized_Difference = bl2122OPFORM$Points_Difference
+) 
+
+# Print the comparison
+print(comparison_table)
+comptab=as.tibble(comparison_table)
+saveRDS(comptab, "comptabbl2122")
+
+# Calculate the sum of squared differences for the baseline model
+sum_sq_diff_baseline <- sum(bl2122baseline$Points_Difference ^ 2)
+
+# Calculate the sum of squared differences for the optimized model
+sum_sq_diff_optimized <- sum(bl2122OPFORM$Points_Difference ^ 2)
+
+# Print the results
+cat("Mean squared error for the baseline model:", sum_sq_diff_baseline/20, "\n")
+cat("Mean squared error for the optimized model:", sum_sq_diff_optimized/20, "\n")
+

@@ -462,7 +462,7 @@ roundNinla = function(n,prevfootie,frm){
     
     inlam = runINLA(formu  =  frm, dat=df)
     
-    set.seed(2223)
+    set.seed(12345)
     
     rN = make_scored(round=n,dt=df, model = inlam,nsims=100)
     
@@ -478,7 +478,7 @@ roundNinlampo = function(n,prevfootie,frm){
   
   inlam = runINLA(formu = frm , dat=df)
   
-  set.seed(2223)
+  set.seed(12345)
   
   rN = make_scored(round=n,dt=df, model = inlam,nsims=100)
   

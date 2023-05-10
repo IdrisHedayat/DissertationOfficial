@@ -452,8 +452,8 @@ duplicating the rows of each fixture for a home and away team row,
 adding a binary variable Home, 1 if the team in the row of a given
 fixture is Home and 0 if away. The Opponent variable was created
 grouping data by ID\_game and assigning each team's opponent as
-necessary. Venue variable is adjustedinstead of being the nstadium name,
-to the name of the team it belongs to; ``Old Trafford'' becomes
+necessary. The Venue variable is adjusted instead of being the stadium
+name, to the name of the team it belongs to; ``Old Trafford'' becomes
 ``Manchester Utd''. We then create the following variables that are to
 be used in the Bayesian Hierachical modelling processing:
 
@@ -594,17 +594,17 @@ been played already. The starting round number r was determined as the
 next game week at the time of modelling, in the case of the Premier
 league: 28, La Liga: 23, Ligue 1: 25, Serie A: 24, and Bundesliga: 22.
 
-Referencing {[}Congdon, 2019{]} below; The INlA alogrithm focuses on the
-posterior density of hyperparameters \(\pi( \lambda \mid y)\) and on the
-conditional posterior for the latent \(\pi(x_i \mid \lambda , y_i)\) A
-Laplace approximation formarginal posterior density of random effects'
+The INlA algorithm {[}Congdon, 2019{]} focuses on the posterior density
+of hyperparameters \(\pi( \lambda \mid y)\) and on the conditional
+posterior for the latent \(\pi(x_i \mid \lambda , y_i)\) A Laplace
+approximation for marginal posterior density of random effects'
 hyperparamters \(\tilde{\pi}(\lambda \mid y)\) and Taylor approximation
-for coonditional posterior of latent
+for conditional posterior of latent
 \(\tilde{\pi}(x_i \mid \lambda , y)\) From these approximations,
-marginal posteriors are obtatined, where integrations are carried out
+marginal posteriors are obtained, where integrations are carried out
 numerically.
 \[\tilde{\pi}(x_i \mid y_i) = \int \tilde{\pi}(\lambda \mid y)  \tilde{\pi}(x_i \mid \lambda , y)\]
-Thust using our model the predictive distribution will have a
+Thus, using our model the predictive distribution will have a
 probability mass function {[}Baio et al., 2018{]}:
 
 \[\tilde{\pi}(\hat{y_1} ,\hat{x_1} \mid y_1 , x_1, z_1, z_2) = \int \tilde{\pi}(\hat{y_1} ,\hat{x_1} \mid z_1 ,z_2,v)  \tilde{\pi}(v \mid y_1 , y_2,  z_1 ,z_2,)\]
@@ -613,9 +613,15 @@ future match, z\_1 z\_2 are the feature ests used, and v is the vector
 of all paramaters of the model. Then cases are considered based on the
 predicted goals scored:
 
--\(\hat{y_1} > \hat{x_1} \therefore\) Home Team wins
--\(\hat{y_1} < \hat{x_1} \therefore\) Away Team wins
--\(\hat{y_1} = \hat{x_1} \therefore\) Draw
+\begin{itemize}
+\tightlist
+\item
+  \(\hat{y_1} > \hat{x_1} \therefore\) Home Team wins
+\item
+  \(\hat{y_1} < \hat{x_1} \therefore\) Away Team wins
+\item
+  \(\hat{y_1} = \hat{x_1} \therefore\) Draw
+\end{itemize}
 
 \pagebreak
 
@@ -680,31 +686,27 @@ Villarreal & -0.0319555 & -0.3119273 & -0.0242798 & 0.2300265 & -0.0941439 & -0.
 \end{table}
 
 Below are visual representations for the team attack and defence effects
-for each of the remained of top 5 leagues:
+for each of the remained of top 5 leagues, using only data from the
+2022/23 seasons. We will discus later how this is impacted when adding
+more data from previous seasons.
 
 \begin{center}\includegraphics[width=400px]{llattdef} \end{center}
-
-\begin{center}\includegraphics[width=400px]{plattdef} \end{center}
 
 \begin{center}\includegraphics[width=400px]{l1attdef} \end{center}
 
 \begin{center}\includegraphics[width=400px]{saattdef} \end{center}
 
-\begin{center}\includegraphics[width=400px]{buliattdef} \end{center}
-
-We can also put the attack and defense effects on the same plot to gain
-an idea of how teams proficient specific teams are at both defendg and
-attacking, showing by far how Barcelona and Real Madrid are the most
-outstanding teams, followed by a cluster of ``next contenders'';
-Atletico Madrid, Real Sociedad, and Athletic Club.
+Attack and Defense effects on the same grid give an idea of how teams
+proficient specific teams are at both defending and attacking relative
+to each other. Consider the case below for La Liga in the 2022/23 season
+showing by far how Barcelona and Real Madrid are the most outstanding
+teams, followed by a cluster of ``next contenders''; Atletico Madrid,
+Real Sociedad, and Athletic Club.
 
 \includegraphics[width=33.33in]{joinedllattdef}
 
 \hypertarget{post-processing}{%
 \subsection{Post Processing}\label{post-processing}}
-
-\hypertarget{make_scored}{%
-\subsubsection{make\_scored():}\label{make_scored}}
 
 Having run the model through INLA, We are then able to generate the
 predictions for goals scored, by simulating from the posterior
@@ -720,10 +722,41 @@ scoring intensity paramter by each team in the specific round:
 
 \[\hat{\lambda_{ij}} = \exp(\hat{att_{hi}} + \hat{def_{aj}} + \hat{home} + \text{offset})\]
 Finally the function generates the predictions for the number of goals
-by simulating from a Poisson Distribution using rpoois(), with the
-predicted scoring intensity parameter:
+by simulating from a Poisson Distribution using \texttt{rpois()}, with
+the predicted scoring intensity parameter:
 
 \[goals_{ij} \sim  \text{Poisson} ( \hat{\lambda_{ij}} )\]
+
+The code used in the modelling process includes utility functions that
+manipulate, visualise, and simulat from our dataset to generate
+predictions.
+
+** Prediction Processing: * \texttt{datprep()} , preps the data of a
+leagueto be used in our \texttt{runINLA()} function. *
+\texttt{runINLA()} , runs the INLA model after specifying the formula,
+data for given round, posterior family, * \texttt{make\_scored()} ,
+Processing function create to predict the number of goals scored by a
+team in a given fixture round.
+
+** Visulisation: * \texttt{team\_strength()} , Display Only Attack or
+Defence Defence random effects for teams in a league *
+\texttt{attack\_defense()} , Display Both Attack and Defence effects on
+the same plot, from the INLA model summary * \texttt{outcome\_predict()}
+, gives the predicted probabilities of either winning, losing, or
+drawing a match. * \texttt{joint\_marginal()} , gives the plot of the
+joint posterior probabilities for specified teams Plots the joint
+posterior distributions of all the possible scores between two team
+given the predicted goals from \texttt{make\_scored()}
+
+** Post-Processing * \texttt{updated\_unplayed()} , extracts the
+unplayed fixtures for a given round and inputs the most common result (
+i think this should instead be inputting just the sample mean of the
+column of goals scored for the team rounded?) *
+\texttt{update\_footie()} , updates the premfootie dataset with the goal
+predictions * \texttt{var\_updater()} , updates the other variables in
+the dataset as a result of the goal predictions * \texttt{roundNinla()}
+, streamlines the simulating process, by completing all of the above 3
+post-processing for a given round N , e.g round 24
 
 \hypertarget{outcome-predictions}{%
 \subsubsection{Outcome predictions:}\label{outcome-predictions}}
@@ -732,144 +765,183 @@ Running inla.summary we are able to extract coefficients for estimates
 of our models fit. For example in the case of baseline model applied to
 Serie A;
 
-\begin{verbatim}
-##              mean    sd 0.025quant 0.5quant 0.975quant  mode kld
-## (Intercept) 0.088 0.092     -0.096    0.089      0.265 0.091   0
-## Home        0.213 0.083      0.050    0.213      0.376 0.213   0
-\end{verbatim}
+\begin{table}
 
-\begin{verbatim}
-##                                   mean      sd 0.025quant 0.5quant 0.975quant
-## Precision for factor(Team)      15.378   7.807      5.391   13.696     35.255
-## Precision for factor(Opponent) 205.856 405.976     18.487   99.446   1083.293
-##                                  mode
-## Precision for factor(Team)     10.891
-## Precision for factor(Opponent) 39.830
-\end{verbatim}
+\caption{\label{tab:unnamed-chunk-3}Serie A Fixed Effects; only 2022-2023 Seasons}
+\centering
+\begin{tabular}[t]{l|r}
+\hline
+  & mean\\
+\hline
+(Intercept) & 0.088\\
+\hline
+Home & 0.213\\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}
+
+\caption{\label{tab:unnamed-chunk-3}Hyperparameter Precision in Serie 2022/23 Season}
+\centering
+\begin{tabular}[t]{l|r}
+\hline
+  & mean\\
+\hline
+Precision for factor(Team) & 15.378\\
+\hline
+Precision for factor(Opponent) & 205.856\\
+\hline
+\end{tabular}
+\end{table}
 
 We see mean values for the intercept and Home fixed effect are 0.088 and
 0.213 respectively. Thus the model equation will take the form:
 \[\log(\lambda_{ij}) = 0.088 + 0.213{home}_j + {att}_{hi} + {def}_{ai} \]
 where
 
-for game g, where: - 0.088 is the intercept - \(0.213home_i\) is the
+for game g, where: * 0.088 is the intercept * \(0.213home_i\) is the
 home advantage efffect for home team in game i, 0.213 increase in the
 log of the scoring paramater used in the poisson model predicting goals
-scored. - \({att}_{hi}\) is the effect for home team of game i -
+scored. * \({att}_{hi}\) is the effect for home team of game i *
 \({def}_{ai}\) is the effect for away team of game i
 
 We notice from the model output that the precision for Team factor has a
 significantly lower precision than opponent factor, indicating
 noticeable variability in the attack effects, while very little hy
 variation for defence effects. Thus the effect of an opponent on a teams
-goal scoring ability (i.e.~a teams ability to defend against a team) is
-less impactful than the teams innate attacking ability itself.
+goal scoring ability (i.e.~a teams ability to defend against a team) has
+less impact than the teams innate attacking ability itself.
+
+\hypertarget{overfitting-concerns---introduction-of-multiple-seasons-data}{%
+\subsubsection{Overfitting Concerns - Introduction of Multiple Seasons'
+Data}\label{overfitting-concerns---introduction-of-multiple-seasons-data}}
+
+The lack of variability accounted for in the model due to overfitting,
+thus th mode may be capturing the noise rather than the underlying
+pattern, in this case resulting in the lack of variability in th
+Opponent random effect. Thus in order to mitigate this concern we
+include the use of multiple seasons data as opposed to using a single
+season, that only provides 760 rows of data. With the inclusion of the
+2019/20, 2020/21, and 2021/22 along with the 2022/23 seasons, this now
+results in dataframes with 3040 rows of data for each league. The
+effects of overfitting are also demonstrated in the random effect
+quantile plots, particularly for the Opponent (Defence) factor. Consider
+the case of the Premier League, where the magnitude of the effects are
+considerably small and closely centered around the mean;
+
+\includegraphics[width=33.33in]{allvssingledefprem} After adding
+multiple seasons of data, we see how there is now noticeable variability
+in the defence effect for all teams. Thus demonstrated how we have
+mitigated the impact of overfitting by adding more data from multiple
+seasons. We also see this in the inla.summary output shown below, where
+the precision for the model hyperparameters are considerably smaller;
+mean 18194.995 when only using 2022/23 compared to 33.254 for 2019-2023
+data.
+
+\begin{table}
+
+\caption{\label{tab:unnamed-chunk-5}Hyperparameter Precision using only 2022-2023 Season}
+\centering
+\begin{tabular}[t]{l|r}
+\hline
+  & mean\\
+\hline
+Precision for factor(Team) & 11.605\\
+\hline
+Precision for factor(Opponent) & 18194.995\\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}
+
+\caption{\label{tab:unnamed-chunk-5}Hyperparameter Precision using 2019-2023 Seasons}
+\centering
+\begin{tabular}[t]{l|r}
+\hline
+  & mean\\
+\hline
+Precision for factor(Team) & 12.364\\
+\hline
+Precision for factor(Opponent) & 33.254\\
+\hline
+\end{tabular}
+\end{table}
+
+\hypertarget{result-generation}{%
+\subsection{Result Generation}\label{result-generation}}
 
 Now that we are able to generate predictions using the
 inla.posterior.sample method for the number of goals scored for each
-team after a given round, we are then able to get predictions for the
-selected fixture of the new round. In similar research the use of
-posterior means or medians is used for each team, however in our
-modelling we use the most probable joint outcome of the joint posterior
-predictive distributions, i.e.~the most common outcome after each n
-simulation is done. In simple terms this is the most common score from
-the n number of rows, where the two columns are the teams playing. For
-instance, using the baseline model in round 23 of La Liga, in a match
-between Cadiz and Rayo Vallecano we have the table:
+team after a given round, we are then able to get predicted match
+outcomes for the selected fixtures. In similar research the use of
+posterior means or medians is used from both individual team's marginal
+distribution, however in our modelling we use the most probable outcome
+from the joint posterior predictive distribution in each fixture,
+i.e.~the most common row outcome between two teams after each n row
+simulations are complete.
 
-\begin{verbatim}
-## # A tibble: 42 x 3
-##    Cadiz `Rayo Vallecano`  prop
-##    <dbl>            <dbl> <dbl>
-##  1     0                1 0.149
-##  2     0                0 0.122
-##  3     1                1 0.117
-##  4     1                0 0.113
-##  5     0                2 0.09 
-##  6     1                2 0.068
-##  7     2                1 0.067
-##  8     2                0 0.064
-##  9     2                2 0.034
-## 10     1                3 0.03 
-## # ... with 32 more rows
-\end{verbatim}
+For instance, using the baseline model in round 23 of the 2022/23 La
+Liga season, in a match between Villarrael and Getafe. We have the
+table:
+
+\begin{table}[!h]
+
+\caption{\label{tab:unnamed-chunk-6}Most Probable Outcomes: Villarael v Getafe, Round 23 of La Liga 2022/23}
+\centering
+\begin{tabular}[t]{r|r|r}
+\hline
+Villarael & Getafe & prop\\
+\hline
+1 & 0 & 0.174\\
+\hline
+1 & 1 & 0.129\\
+\hline
+0 & 0 & 0.127\\
+\hline
+2 & 0 & 0.123\\
+\hline
+0 & 1 & 0.109\\
+\hline
+2 & 1 & 0.068\\
+\hline
+\end{tabular}
+\end{table}
 
 Here `prop' is the proportion of outcomes with the given result, thus in
-this case 14.9\% of outcomes in the match see Rayo Vallecano as victors.
+this case 17.4\% of outcomes in the match see Villarrael as victors
+specifically with a score of 1-0.
 
 We can visually display the joint marginal distribution of goals scored
-in this specific match as so;
+in this specific match, using our created function:
+\texttt{joint\_marginal()}.
 
-\includegraphics[width=25in]{CadizVallecanoJM}
+\includegraphics[width=25in]{VillaraelGetafeJM}
 
-Again we can visually see the probability of outcomes from the joint
-posterior distribution, along with the probability of winning, drawing,
-or losing, based on the possible outcomes predicted. However the
-histograms of the sampled marginal posterior distribution for teams
-invidiually, with highest density of 0 goal scored for Rayo Vallecano
-(top), and 1 for Cadiz (right), despit the most probable outcome being a
-1-0 win for Rayo Vallecano.
+We see the probability of every possible outcome from the joint
+posterior distribution, along with the overall probability of winning,
+drawing, or losing found using our created \texttt{outcome\_predict()}
+function. The histograms represents the sampled marginal posterior
+distribution for teams individually, with highest density of 0 goal
+scored for Getafe (top), and 1 for Villarrael (Right).
 
-We then update the relevant league dataset's `Goal' column, as well as
-the associated variables derived from it such as Points , Goal
+After determining the most likely result of relevant `Goal' column, as
+well as the associated variables derived from it such as Points , Goal
 Difference, Relative Strength etc. Although as before these are not used
 in the baseline model.
 
-In the case of bundesliga, we calculate the cumulative points determined
+In the case of Bundesliga, we calculate the cumulative points determined
 from goals scored in each game, and derive the league table at the end
 of the season: We first show the results when using the Mean of each
 teams predicted goals after n simulations, compared to using the joint
 predictive posterior distribution. Using means shows Bayern Munich
 winning the league, where as the most probable outcome from the joint
-distributions leads to Dortmund wnning the league
+distributions leads to Dortmund winning the league
 
-\begin{verbatim}
-## # A tibble: 18 x 6
-##    Position Team           total_points total_G total_GC total_GD
-##       <int> <chr>                 <dbl>   <dbl>    <dbl>    <dbl>
-##  1        1 Bayern Munich            65      84       41       43
-##  2        2 Union Berlin             63      56       44       12
-##  3        3 RB Leipzig               61      64       45       19
-##  4        4 Dortmund                 60      64       48       16
-##  5        5 Freiburg                 58      55       52        3
-##  6        6 Eint Frankfurt           52      63       52       11
-##  7        7 Wolfsburg                51      58       48       10
-##  8        8 Mainz 05                 47      54       55       -1
-##  9        9 M'Gladbach               46      58       56        2
-## 10       10 Leverkusen               44      57       57        0
-## 11       11 Werder Bremen            44      51       62      -11
-## 12       12 Köln                     41      52       56       -4
-## 13       13 Augsburg                 41      46       57      -11
-## 14       14 Stuttgart                39      47       56       -9
-## 15       15 Bochum                   38      46       72      -26
-## 16       16 Hoffenheim               36      49       61      -12
-## 17       17 Hertha BSC               36      47       61      -14
-## 18       18 Schalke 04               29      35       63      -28
-\end{verbatim}
-
-\begin{verbatim}
-## # A tibble: 18 x 6
-##    Position Team           total_points total_G total_GC total_GD
-##       <int> <chr>                 <dbl>   <dbl>    <dbl>    <dbl>
-##  1        1 Dortmund                 63      58       41       17
-##  2        2 Freiburg                 60      47       41        6
-##  3        3 Bayern Munich            57      73       34       39
-##  4        4 Union Berlin             57      46       37        9
-##  5        5 RB Leipzig               55      54       39       15
-##  6        6 Eint Frankfurt           50      52       43        9
-##  7        7 Wolfsburg                47      51       42        9
-##  8        8 M'Gladbach               47      52       49        3
-##  9        9 Mainz 05                 47      46       46        0
-## 10       10 Köln                     46      48       46        2
-## 11       11 Werder Bremen            45      43       53      -10
-## 12       12 Leverkusen               41      49       48        1
-## 13       13 Hertha BSC               40      40       50      -10
-## 14       14 Stuttgart                39      44       49       -5
-## 15       15 Bochum                   36      39       67      -28
-## 16       16 Hoffenheim               33      39       52      -13
-## 17       17 Augsburg                 33      38       52      -14
-## 18       18 Schalke 04               25      25       55      -30
-\end{verbatim}
+\hypertarget{implementation-of-other-covariates}{%
+\subsubsection{Implementation of Other
+Covariates}\label{implementation-of-other-covariates}}
 
 We next aim to add covariates to the log linear model estimating the
 scoring parameter, which follow the form:
@@ -899,8 +971,8 @@ that provides a better fit for predictions. We next consider compare
 different combinations of covariates in finding the best fit through
 INLA modelling.
 
-\hypertarget{model-checking}{%
-\section{Model Checking:}\label{model-checking}}
+\hypertarget{model-selection}{%
+\subsection{Model Selection:}\label{model-selection}}
 
 Typically in INLA and hierarchical modelling (Rue et al.~2009), the use
 of Deviance Information Criterion and
@@ -920,165 +992,311 @@ although in INLA is is scaled by factor of 2 for comparability with DIC
 and other measures of deviance. DIC makes the assumption that the
 posterior is approximately multivariate normal, while WAI can be
 numerically calculated without information on the true distribution.
-WAIC also an extension of the widely used AIC in the bayesian context,
-and also offers the bonus of no need for effective paramaters, again
-unlike DIC. Given the added applicability to general BHM methodology,
-the WAIC is a better indicator of model suitability.
+WAIC also an extension of the widely used AIC in the Bayesian context,
+and also offers the bonus of no need for effective parameters, again
+unlike DIC. Given the added applicability to general BHM methods, the
+WAIC is a better indicator of model suitability.
+
+\hypertarget{optimised-model-formulas-for-log-linear-models}{%
+\subsection{Optimised Model Formulas for Log Linear
+Models}\label{optimised-model-formulas-for-log-linear-models}}
+
+\hypertarget{premier-league}{%
+\subsubsection{Premier League}\label{premier-league}}
 
 Below is a table showing the top 10 models with the lowest WAIC,
-indicating top 10 most suitable models since lowest WAIC demonstrates
-lower deviance.
+indicating top 10 most suitable models given the fact that lower WAIC
+demonstrates desirable lower deviance. Consider the example below of the
+Premier League, where the formula that results in the lowest WAIC
+includes added covariates Form, Goals Per Game (Gpc), Goals Conceded Per
+Game (GCpg), and Goal Difference-Difference between teams (GDdiff).
 
 \begin{table}[!h]
 
-\caption{\label{tab:unnamed-chunk-7}Top 10 Model Combinations By WAIC}
+\caption{\label{tab:unnamed-chunk-8}Top 10 Model Combinations By WAIC: Premier League}
 \centering
 \resizebox{\linewidth}{!}{
 \begin{tabular}[t]{c|c}
 \hline
-Formulae & WAIC\\
+Formula & WAIC\\
 \hline
-Home+ diff\_rank + Gpg + GCpg + GDdiff + Att + Def & 968.456\\
+Goal \textasciitilde{} Home + form + Gpg + GCpg + GDdiff + Att + Def & 6642.466\\
 \hline
-Home + Gpg + GCpg + GDdiff + Att + Def & 969.284\\
+Goal \textasciitilde{} Home + form + days\_since\_last + Gpg + GCpg + GDdiff + Att + Def & 6643.580\\
 \hline
-Home + diff\_rank + days\_since\_last + Gpg + GCpg + GDdiff + Att + Def & 969.340\\
+Goal \textasciitilde{} Home + rel\_strength + form + Gpg + GCpg + GDdiff + Att + Def & 6643.728\\
 \hline
-Home + diff\_rank + form + Gpg + GCpg + GDdiff + Att + Def & 969.512\\
+Goal \textasciitilde{} Home + diff\_rank + form + Gpg + GCpg + GDdiff + Att + Def & 6643.918\\
 \hline
-Home + form + Gpg + GCpg + GDdiff + Att + Def & 969.619\\
+Goal \textasciitilde{} Home + Gpg + GCpg + GDdiff + Att + Def & 6644.575\\
 \hline
-Home + rel\_strength + diff\_rank + Gpg + GCpg + GDdiff + Att + Def & 969.686\\
+Goal \textasciitilde{} Home + rel\_strength + form + days\_since\_last + Gpg + GCpg + GDdiff + Att + Def & 6644.813\\
 \hline
-Home + rel\_strength + Gpg + GCpg + GDdiff + Att + Def & 969.942\\
+Goal \textasciitilde{} Home + rel\_strength + diff\_rank + form + Gpg + GCpg + GDdiff + Att + Def & 6644.870\\
 \hline
-Home + rel\_strength + form + Gpg + GCpg + GDdiff + Att + Def & 970.149\\
+Goal \textasciitilde{} Home + diff\_rank + form + days\_since\_last + Gpg + GCpg + GDdiff + Att + Def & 6645.032\\
 \hline
-Home + days\_since\_last + Gpg + GCpg + GDdiff + Att + Def & 970.370\\
+Goal \textasciitilde{} Home + days\_since\_last + Gpg + GCpg + GDdiff + Att + Def & 6645.622\\
 \hline
-Home + diff\_rank + form + days\_since\_last + Gpg + GCpg + GDdiff + Att + Def & 970.579\\
+Goal \textasciitilde{} Home + rel\_strength + Gpg + GCpg + GDdiff + Att + Def & 6645.838\\
 \hline
 \end{tabular}}
 \end{table}
 
-Thus the optimal formula after this point in the model building process
-is of the form: Home Goals in game i:
-\[log(\lambda_{i}) = \beta_0 +  att_{h_i} + def_{a_i} + \beta_1 home + \beta_2 diff_rank + \beta_3 Gpg + \beta_4 GCpg +  \beta_5GDdiff"\]
+Thus the optimal formula for the Premier League model after this part of
+the model building process is of the form:
+
+Home Goals in game i:
+\[log(\lambda_{1i}) = \beta_0 +  att_{h_i} + def_{a_i} + \beta_1 Home_j + \beta_2 form + \beta_3 Gpg + \beta_4 GCpg +  \beta_5GDdiff\]
 Away Goals in game i:
 
-\[log(\lambda_{i}) = \beta_0 +  att_{a_i} + def_{h_i} +  \beta_2 diff_rank + \beta_3 Gpg + \beta_4 GCpg +  \beta_5GDdiff"\]
-\#\# Aditional Model Covariate Consideration
+\[log(\lambda_{2i}) = \beta_0 +  att_{h_i} + def_{a_i} + \beta_1 form + \beta_2 Gpg + \beta_3 GCpg +  \beta_4 GDdiff\]
+
+As for the other domestic leagues, the optimised formulae for the log
+linear models are:
+
+\hypertarget{la-liga}{%
+\subsubsection{La Liga:}\label{la-liga}}
+
+Home Team:
+\[log(\lambda_{1i}) = \beta_0 +  att_{a_i} + def_{h_i} +  \beta_1 Home + \beta_2 Gpg + \beta_3 GCpg + \beta_4 GDdiff\]
+Away Team:
+\[log(\lambda_{2i}) = \beta_0 +  att_{h_i} + def_{a_i} + \beta_1 Gpg + \beta_2 GCpg +  \beta_3 GDdiff\]
+
+\hypertarget{serie-a}{%
+\subsubsection{Serie A:}\label{serie-a}}
+
+Home Team:
+\[log(\lambda_{1i}) = \beta_0 +  att_{a_i} + def_{h_i} +  \beta_1 Home + \beta_2 Gpg + \beta_3 GCpg + \beta_4 GDdiff + \beta_5 Form\]
+Away Team:
+\[log(\lambda_{2i}) = \beta_0 +  att_{h_i} + def_{a_i} + \beta_1 Gpg + \beta_2 GCpg +  \beta_3 GDdiff + \beta_4 form\]
+
+\hypertarget{bundesliga}{%
+\subsubsection{Bundesliga:}\label{bundesliga}}
+
+Home Team:
+\[log(\lambda_{1i}) = \beta_0 +  att_{a_i} + def_{h_i} +  \beta_1 Home + \beta_2 Gpg + \beta_3 GCpg + \beta_4 GDdiff\]
+Away Team:
+\[log(\lambda_{2i}) = \beta_0 +  att_{h_i} + def_{a_i} + \beta_1 Gpg + \beta_2 GCpg +  \beta_3 GDdiff\]
+
+\hypertarget{ligue-1}{%
+\subsubsection{Ligue 1:}\label{ligue-1}}
+
+Home Team:
+\[log(\lambda_{1i}) = \beta_0 +  att_{a_i} + def_{h_i} +  \beta_1 Home + \beta_2 Gpg + \beta_3 GCpg + \beta_4 GDdiff + \beta_5 diffrank\]
+Away Team:
+\[log(\lambda_{2i}) = \beta_0 +  att_{h_i} + def_{a_i} + \beta_1 Gpg + \beta_2 GCpg +  \beta_3 GDdiff + \beta_4 diffrank\]
+\#\# Aditional Covariate Consideration
 
 We also explore the addition of other covariates that may further
 improve model performance. First, a time component that aims to address
-team's difference in performance over time. This is added to the inla
+team's difference in performance over time. This is added to the INLA
 model using
-\texttt{f(id\_date,model="rw2",replicate=as.numeric(factor(Team)))} This
-is modelled by a random walk model of order 2 \texttt{model="rw2"}on the
-fixture data variable representing the time component, computed
-seperately for each tean \texttt{replicate=as.numeric(factor(Team))}.
+\texttt{f(id\_date,model="rw2",replicate=as.numeric(factor(Team)))}. A
+Random Walk model of order 2 \texttt{model="rw2"} based on the fixture
+date variable representing the time component, is computed separately
+for each team \texttt{replicate=as.numeric(factor(Team))}. The effects
+from the Random Walk over the course of the dates in our dataset
+(between the start of the 2019 season and end of the 2023 season) are
+shown in the plot below:
 
-Another feature to consider is overdispersion, a common feature in count
-data like goals scored in football. Overdispersion occurs when variance
-of the observed data is greater than what would be expected under a
-simple Poisson distribution, thus we aim to capture extra variability
-that may not be accounted for with other covariates. This is
-demonstrated in the code by \texttt{f(num,model="iid")}.
+\includegraphics[width=25in]{LaligaTTplot}
 
-Given the additional covariates we can consider in the formula used for
-the log linear model to be used in INLA, the next step is to consider
-validation and comparison methods to determine a suitable model for
-predicting the remainder of the 2022/23 seasons of the repsective
-domestic leagues.
+Another are of Bayesian Hierarchical Modelling to consider is
+overdispersion, a common feature in count data like goals scored in
+football. Overdispersion occurs when variance of the observed data is
+greater than what would be expected under a simple Poisson distribution,
+thus we aim to capture extra variability that may not be accounted for
+with other covariates. This is demonstrated in the code by
+\texttt{f(num,model="iid")} which adds another random effect to the INLA
+model, based on `num' which is the unique identifier of every row in the
+data.
 
-However after adding these variables individually and together, we see
-that they do not improve model fit by WAIC; adding the random walk time
-component increases deviation to 988.861, while adding the
-overdispersion parameter neither improves or negatively impacts WAIC. We
-note the very high in precision in the model hyperparameters for these
-added random effects via the summary output, demonstrating the lack of
-variability in the the
+However after adding these variables individually and together, they did
+not improve model fit by WAIC; adding the random walk time component
+increased deviation, while adding the overdispersion parameter neither
+improved or negatively impacts WAIC by a noticeable amount. We note the
+very high in precision in the model hyperparameters for these added
+random effects via the summary output, demonstrating the lack of
+variability that is captured by these covariates. Thus we continue
+without them.
 
 \hypertarget{model-validation}{%
 \subsection{Model Validation}\label{model-validation}}
 
 In model validation we aim to compare the effectiveness of the more
-complex model and the baseline model in terms of performance, We execute
-this using a previous seasons data, for example the Serie A season
-2021/22.
+complex `optimised' model, based off WAIC, and the baseline model. This
+is executed using all the prior seasons data, with observed data up
+until halfway through the 2021/22 season. We then simulate the remainder
+of the 2021/22 seasons for each league, and compare with the observed
+results of the final league positions for each team. The mean square
+error of the optimised and baseline model are compared, and we proceed
+to the 2022/23 modelling based on which model has lower MSE. Consider
+the case of the Premier League model validation, the table below shows
+the predictive performance of the
 
 \begin{table}[!h]
+
+\caption{\label{tab:unnamed-chunk-11}Comparing Baseline and Optimised models Performance vs Obesrved}
 \centering
 \resizebox{\linewidth}{!}{
-\begin{tabular}{l|r|r|r|r|r}
+\begin{tabular}[t]{l|r|r|r|r|r}
 \hline
 Team & Observed\_Points & Baseline\_Points & Baseline\_Difference & Optimized\_Points & Optimized\_Difference\\
 \hline
-Atalanta & 59 & 65 & 6 & 68 & 9\\
+Arsenal & 69 & 56 & 13 & 56 & 13\\
 \hline
-Bologna & 46 & 44 & 2 & 54 & 8\\
+Aston Villa & 45 & 61 & 16 & 47 & 2\\
 \hline
-Cagliari & 30 & 31 & 1 & 30 & 0\\
+Brentford & 46 & 35 & 11 & 37 & 9\\
 \hline
-Empoli & 41 & 51 & 10 & 60 & 19\\
+Brighton & 51 & 36 & 15 & 44 & 7\\
 \hline
-Fiorentina & 62 & 57 & 5 & 58 & 4\\
+Burnley & 35 & 33 & 2 & 35 & 0\\
 \hline
-Genoa & 28 & 39 & 11 & 37 & 9\\
+Chelsea & 74 & 67 & 7 & 61 & 13\\
 \hline
-Hellas Verona & 53 & 49 & 4 & 58 & 5\\
+Crystal Palace & 48 & 57 & 9 & 42 & 6\\
 \hline
-Inter & 84 & 68 & 16 & 69 & 15\\
+Everton & 39 & 37 & 2 & 39 & 0\\
 \hline
-Juventus & 70 & 60 & 10 & 75 & 5\\
+Leeds United & 38 & 44 & 6 & 36 & 2\\
 \hline
-Lazio & 64 & 57 & 7 & 60 & 4\\
+Leicester City & 52 & 51 & 1 & 47 & 5\\
 \hline
-Milan & 86 & 61 & 25 & 64 & 22\\
+Liverpool & 92 & 65 & 27 & 68 & 24\\
 \hline
-Napoli & 79 & 61 & 18 & 66 & 13\\
+Manchester City & 93 & 86 & 7 & 74 & 19\\
 \hline
-Roma & 63 & 56 & 7 & 51 & 12\\
+Manchester Utd & 58 & 60 & 2 & 56 & 2\\
 \hline
-Salernitana & 31 & 27 & 4 & 21 & 10\\
+Newcastle Utd & 49 & 35 & 14 & 35 & 14\\
 \hline
-Sampdoria & 36 & 53 & 17 & 57 & 21\\
+Norwich City & 22 & 34 & 12 & 31 & 9\\
 \hline
-Sassuolo & 50 & 44 & 6 & 50 & 0\\
+Southampton & 40 & 41 & 1 & 42 & 2\\
 \hline
-Spezia & 36 & 32 & 4 & 39 & 3\\
+Tottenham & 71 & 61 & 10 & 56 & 15\\
 \hline
-Torino & 50 & 46 & 4 & 44 & 6\\
+Watford & 23 & 32 & 9 & 28 & 5\\
 \hline
-Udinese & 47 & 41 & 6 & 46 & 1\\
+West Ham & 56 & 62 & 6 & 54 & 2\\
 \hline
-Venezia & 27 & 41 & 14 & 55 & 28\\
+Wolves & 51 & 56 & 5 & 51 & 0\\
 \hline
 \end{tabular}}
 \end{table}
 
-We see from the results and after calcuating the mean square error of
-points; baseline model 115.55 and optimized model 153.1. In this case
-the baseline results perform better. This is perhaps because the
-baseline effects are better at capturing the team effects\ldots\ldots{}
+Using the figures above we are able to calculated the mean squared error
+for the baseline model and optimised models respectively; 115.55, 100.65
+thus demonstrating we have achieved better performance using the
+optimised formula in the log linear model for the scoring parameters.
+The improved performance is consistent with results of Bundesliga, Serie
+A, and La Liga, all of which had lower MSE than their baseline models.
+However in the case of Ligue 1, as the baseline model achieves lower
+MSE. This may be due to the reduce number of data points used in
+modelling. In the 2019/20 seasont the COVID-19 Pandemic resulted in the
+distruption of football scheduling in the domestic leagues, and while
+the other four returned to action, Ligue 1 ended halfway through. Thus
+when modelling using data from 2019-2023, there are missing observations
+that were removed for the French league. This means that the baseline
+model, which is stronger at identifying variability in team attack and
+defence random effects, may better fit the league with fewer data
+available, since the otimised model may overfit the data.
 
-Need Gianluca's Help here, i must have approached this part wrong
+We thus model the 2022/23 seasons using the optimised log linear models
+for the Premier League, Bundesliga, Serie A, and La liga, whilst using
+the baseline model for Ligue 1.
 
-Thus
+\hypertarget{final-predictions}{%
+\subsection{Final Predictions}\label{final-predictions}}
 
-\hypertarget{discussion}{%
-\section{Discussion:}\label{discussion}}
+Now that we have final models to predict performances in the European
+domestic leagues, we return to the original questions; How will the
+teams perform in the 2022/2023 season? How will the results fair with
+the removal of the Super League Teams?
+
+\hypertarget{predicting-with-super-league-teams}{%
+\subsubsection{Predicting with Super League
+Teams}\label{predicting-with-super-league-teams}}
+
+\hypertarget{premier-league-1}{%
+\paragraph{Premier League}\label{premier-league-1}}
+
+\hypertarget{la-liga-1}{%
+\paragraph{La Liga}\label{la-liga-1}}
+
+\hypertarget{bundesliga-1}{%
+\paragraph{Bundesliga}\label{bundesliga-1}}
+
+\hypertarget{serie-a-1}{%
+\paragraph{Serie A}\label{serie-a-1}}
+
+\hypertarget{ligue-1-1}{%
+\paragraph{Ligue 1}\label{ligue-1-1}}
+
+\hypertarget{predicting-without-super-league-teams}{%
+\subsubsection{Predicting Without Super League
+Teams}\label{predicting-without-super-league-teams}}
+
+\hypertarget{premier-league-2}{%
+\paragraph{Premier League}\label{premier-league-2}}
+
+\hypertarget{la-liga-2}{%
+\paragraph{La Liga}\label{la-liga-2}}
+
+\hypertarget{bundesliga-2}{%
+\paragraph{Bundesliga}\label{bundesliga-2}}
+
+\hypertarget{serie-a-2}{%
+\paragraph{Serie A}\label{serie-a-2}}
+
+\hypertarget{ligue-1-2}{%
+\paragraph{Ligue 1}\label{ligue-1-2}}
+
+\hypertarget{discussion-only-sumarries-at-the-moment}{%
+\section{Discussion: (ONLY SUMARRIES AT THE
+MOMENT)}\label{discussion-only-sumarries-at-the-moment}}
+
+\hypertarget{conclusions}{%
+\subsection{Conclusions}\label{conclusions}}
+
+\begin{itemize}
+\tightlist
+\item
+  talk about what we foud in our results compare the withsuperleague to
+  withoutsuperleague preditions,
+\item
+  what are the supposed effect of these predictions? the significance?
+\end{itemize}
+
+\hypertarget{limitations}{%
+\subsection{Limitations}\label{limitations}}
 
 \begin{itemize}
 \item
-  Conclusion
+  A common probablem of the Bayesian Hierarchical model is overshrinkage
+  where extreme outcomes, like a team scoring 8 goals, are instead
+  pulled towards the grand mean. We notice this in the use of
 \item
-  Limitation
+  Can improve performance using more data
+\item
+  Lack of Covariates
 \end{itemize}
 
-A common probablem of the Bayesian Hierarchical model is overshrinkage
-where extreme outcomes, like a team scoring 8 goals, are instead pulled
-towards the grand mean. We notice this in the use of - Future Work
+\hypertarget{future-work}{%
+\subsection{Future Work}\label{future-work}}
+
+\begin{itemize}
+\item
+  3 Tier Hierarchical Model
+\item
+  Machine Learning Techniques?
+\item
+  add more complex covariates ? player specific level perhaps?
+\end{itemize}
+
+etc.
 
 References: (still draft)
 

@@ -101,10 +101,19 @@ Mallprem=inla(formula = eqB,
                 family="poisson",
                 control.predictor=list(compute=TRUE,link=1),
                 control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
-summary(Mallprem)
+Mallpremsum = summary(Mallprem)
+saveRDS(Mallpremsum,"Mallpremsum.rds")
 # Watanabe-Akaike information criterion (WAIC) ...: 6788.99
 
+
+# defence effect for all teams for all seasons
 allpremdef = t5team_strength(Mallprem,Allprem,"defense") + ylab("Teams")
+# defence effect if we are only using single prem season.
+premdef2223onyl = t5team_strength(mprem,plfootie,"defense")   + ylab("Teams")
+allvssingledefprem = grid.arrange(premdef2223onyl,allpremdef,ncol=2) 
+ggsave("allvssingledefprem.png",allvssingledefprem,width = 8, height = 4, dpi = 300)
+
+
 
 ggsave("allpremdef.png",allpremdef,width = 8, height = 4, dpi = 300)
 
@@ -403,6 +412,122 @@ sum_sq_diff_optimized <- sum(bl2122OPFORM$Points_Difference ^ 2)
 cat("Mean squared error for the baseline model:", sum_sq_diff_baseline/20, "\n")
 cat("Mean squared error for the optimized model:", sum_sq_diff_optimized/20, "\n")
 
+#### Final Predictions for league with teams joining super league #####
 
-###### IT WORKSSSSSS WE GOT BETTER MEAN SQARE ERROR FOR OPTIMISED MODEL !!!!! ########
+OpForm = Goal ~ Home + 
+  form +
+  Gpg +
+  GCpg +
+  GDdiff +
+  f(factor(Team), model = "iid") +
+  f(factor(Opponent), model = "iid")  
 
+Allpremfinal = Allprem
+
+Mallprem=inla(formula = OpForm,
+              data=Allpremfinal,
+              family="poisson",
+              control.predictor=list(compute=TRUE,link=1),
+              control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
+Mallpremsum = summary(Mallprem)
+saveRDS(Mallpremsum,"MallpremsumFinal.rds")
+
+prem2223r25 = roundNinlampo(25,Allpremfinal, frm = OpForm) 
+prem2223r26 = roundNinlampo(26,prem2223r25$footieN,frm = OpForm) 
+prem2223r27 = roundNinlampo(27,prem2223r26$footieN,frm = OpForm) 
+prem2223r28 = roundNinlampo(28,prem2223r27$footieN,frm = OpForm) 
+prem2223r29 = roundNinlampo(29,prem2223r28$footieN,frm = OpForm) 
+prem2223r30 = roundNinlampo(30,prem2223r29$footieN,frm = OpForm) 
+prem2223r31 = roundNinlampo(31,prem2223r30$footieN,frm = OpForm) 
+prem2223r32 = roundNinlampo(32,prem2223r31$footieN,frm = OpForm) 
+prem2223r33 = roundNinlampo(33,prem2223r32$footieN,frm = OpForm) 
+prem2223r34 = roundNinlampo(34,prem2223r33$footieN,frm = OpForm) 
+prem2223r35 = roundNinlampo(35,prem2223r34$footieN,frm = OpForm) 
+prem2223r36 = roundNinlampo(36,prem2223r35$footieN,frm = OpForm) 
+prem2223r37 = roundNinlampo(37,prem2223r36$footieN,frm = OpForm) 
+prem2223r38 = roundNinlampo(38,prem2223r37$footieN,frm = OpForm) 
+
+
+prem2223finaltab = prem2223r38$footieN %>%
+  filter(season_id == 4) %>%
+  group_by(Team) %>%
+  summarize(total_points = sum(points_won)) %>%
+  arrange(desc(total_points))
+
+prem2223finaltab
+saveRDS(prem2223finaltab,"Prem2223TabWithSuperLeaguers")
+
+
+
+#### Final Predictions for league WITHUOT teams joining super league #####
+
+OpForm = Goal ~ Home + 
+  form +
+  Gpg +
+  GCpg +
+  GDdiff +
+  f(factor(Team), model = "iid") +
+  f(factor(Opponent), model = "iid")  
+
+teams_to_remove_prem <- c("Arsenal", "Chelsea", "Liverpool", "Manchester City", "Manchester Utd", "Tottenham")
+
+Allpremfinal2 <- prem2223r38$footieN  %>%
+  filter(!(Team %in% teams_to_remove_prem | Opponent %in% teams_to_remove_prem))
+
+prem2223finaltab2 = Allpremfinal2 %>%
+  filter(season_id == 4) %>%
+  group_by(Team) %>%
+  summarize(total_points = sum(points_won)) %>%
+  arrange(desc(total_points))
+
+prem2223finaltab2
+saveRDS(prem2223finaltab2,"Prem2223TabWithoutSuperLeaguers")
+
+# Mallprem2=inla(formula = OpForm,
+#               data=Allpremfinal2,
+#               family="poisson",
+#               control.predictor=list(compute=TRUE,link=1),
+#               control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
+# Mallpremsum2 = summary(Mallprem2)
+# saveRDS(Mallpremsum2,"MallpremsumFinal2.rds")
+# prem2223r252$inlam
+# prem2223r252 = roundNinlampo(25,Allpremfinal2, frm = OpForm) 
+# prem2223r262 = roundNinlampo(26,prem2223r252$footieN,frm = OpForm) 
+# prem2223r272 = roundNinlampo(27,prem2223r262$footieN,frm = OpForm) 
+# prem2223r282 = roundNinlampo(28,prem2223r272$footieN,frm = OpForm) 
+# prem2223r292 = roundNinlampo(29,prem2223r282$footieN,frm = OpForm) 
+# prem2223r302 = roundNinlampo(30,prem2223r292$footieN,frm = OpForm) 
+# prem2223r312 = roundNinlampo(31,prem2223r302$footieN,frm = OpForm) 
+# prem2223r322 = roundNinlampo(32,prem2223r312$footieN,frm = OpForm) 
+# prem2223r332 = roundNinlampo(33,prem2223r322$footieN,frm = OpForm) 
+# prem2223r342 = roundNinlampo(34,prem2223r332$footieN,frm = OpForm) 
+# prem2223r352 = roundNinlampo(35,prem2223r342$footieN,frm = OpForm) 
+# prem2223r362 = roundNinlampo(36,prem2223r352$footieN,frm = OpForm) 
+# prem2223r372 = roundNinlampo(37,prem2223r362$footieN,frm = OpForm) 
+# prem2223r382 = roundNinlampo(38,prem2223r372$footieN,frm = OpForm) 
+
+
+prem2223finaltab2 = prem2223r382$footieN %>%
+  filter(season_id == 4) %>%
+  group_by(Team) %>%
+  summarize(total_points = sum(points_won)) %>%
+  arrange(desc(total_points))
+
+prem2223finaltab2
+saveRDS(prem2223finaltab2,"Prem2223TabWithoutSuperLeaguers")
+
+
+# "Arsenal",
+# "Chelsea",
+# "Liverpool",
+# "Manchester City",
+# "Manchester Utd",
+# "Tottenham", 
+# "Milan", 
+# "Inter" ,
+# "Juventus", 
+# "Atletico Madrid", 
+# "Barcelona", 
+# "Real Madrid",
+# "Bayern Munich",
+# "Paris S-G",

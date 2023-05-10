@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.4.29)  5 MAY 2023 02:39
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.4.29)  9 MAY 2023 03:57
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -457,7 +457,14 @@ Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 28
 File: l3backend-pdftex.def 2023-04-19 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count311
 \l__pdf_internal_box=\box73
-) (./DissertationWriteUpV1.aux)
+) (./DissertationWriteUpV1.aux
+
+LaTeX Warning: Label `tab:unnamed-chunk-3' multiply defined.
+
+
+LaTeX Warning: Label `tab:unnamed-chunk-5' multiply defined.
+
+)
 \openout1 = `DissertationWriteUpV1.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 95.
@@ -570,90 +577,105 @@ LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 16
 (/Users/idrishedayat/Library/TinyTeX/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) [3] [4{/Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}] [5] [6] [7{/Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}{/Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}{/Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}] [8] [9] [10] [11] [12] [13]
-<DissertationWriteUpV1_files/figure-latex/DAG-1.pdf, id=214, 469.755pt x 325.215pt>
+<DissertationWriteUpV1_files/figure-latex/DAG-1.pdf, id=244, 469.755pt x 325.215pt>
 File: DissertationWriteUpV1_files/figure-latex/DAG-1.pdf Graphic file (type pdf)
 <use DissertationWriteUpV1_files/figure-latex/DAG-1.pdf>
 Package pdftex.def Info: DissertationWriteUpV1_files/figure-latex/DAG-1.pdf  used on input line 586.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
 [14] [15 <./DissertationWriteUpV1_files/figure-latex/DAG-1.pdf>] [16]
-<llattdef.png, id=236, 578.16pt x 289.08pt>
+<llattdef.png, id=266, 578.16pt x 289.08pt>
 File: llattdef.png Graphic file (type png)
 <use llattdef.png>
-Package pdftex.def Info: llattdef.png  used on input line 685.
+Package pdftex.def Info: llattdef.png  used on input line 693.
 (pdftex.def)             Requested size: 401.49803pt x 200.74901pt.
 [17]
-<plattdef.png, id=244, 578.16pt x 289.08pt>
-File: plattdef.png Graphic file (type png)
-<use plattdef.png>
-Package pdftex.def Info: plattdef.png  used on input line 687.
-(pdftex.def)             Requested size: 401.49803pt x 200.74901pt.
-<l1attdef.png, id=245, 578.16pt x 289.08pt>
+<l1attdef.png, id=274, 578.16pt x 289.08pt>
 File: l1attdef.png Graphic file (type png)
 <use l1attdef.png>
-Package pdftex.def Info: l1attdef.png  used on input line 689.
+Package pdftex.def Info: l1attdef.png  used on input line 695.
 (pdftex.def)             Requested size: 401.49803pt x 200.74901pt.
-<saattdef.png, id=246, 578.16pt x 289.08pt>
+<saattdef.png, id=275, 578.16pt x 289.08pt>
 File: saattdef.png Graphic file (type png)
 <use saattdef.png>
-Package pdftex.def Info: saattdef.png  used on input line 691.
+Package pdftex.def Info: saattdef.png  used on input line 697.
 (pdftex.def)             Requested size: 401.49803pt x 200.74901pt.
-[18 <./llattdef.png> <./plattdef.png> <./l1attdef.png>]
-<buliattdef.png, id=251, 578.16pt x 289.08pt>
-File: buliattdef.png Graphic file (type png)
-<use buliattdef.png>
-Package pdftex.def Info: buliattdef.png  used on input line 693.
-(pdftex.def)             Requested size: 401.49803pt x 200.74901pt.
-<joinedllattdef.png, id=252, 578.16pt x 289.08pt>
+[18 <./llattdef.png> <./l1attdef.png> <./saattdef.png>]
+<joinedllattdef.png, id=280, 578.16pt x 289.08pt>
 File: joinedllattdef.png Graphic file (type png)
 <use joinedllattdef.png>
-Package pdftex.def Info: joinedllattdef.png  used on input line 701.
+Package pdftex.def Info: joinedllattdef.png  used on input line 706.
 (pdftex.def)             Requested size: 578.18504pt x 289.09251pt.
 
-Overfull \hbox (108.43002pt too wide) in paragraph at lines 701--702
+Overfull \hbox (108.43002pt too wide) in paragraph at lines 706--707
 [][] 
  []
 
-[19 <./saattdef.png> <./buliattdef.png>]
-LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 714.
+LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 716.
 (/Users/idrishedayat/Library/TinyTeX/texmf-dist/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-) [20 <./joinedllattdef.png>] [21] [22]
-<CadizVallecanoJM.png, id=276, 433.62pt x 433.62pt>
-File: CadizVallecanoJM.png Graphic file (type png)
-<use CadizVallecanoJM.png>
-Package pdftex.def Info: CadizVallecanoJM.png  used on input line 803.
-(pdftex.def)             Requested size: 433.63878pt x 433.63878pt.
-[23 <./CadizVallecanoJM.png>] [24] [25] [26] [27]
+) [19 <./joinedllattdef.png>] [20] [21]
+<allvssingledefprem.png, id=302, 578.16pt x 289.08pt>
+File: allvssingledefprem.png Graphic file (type png)
+<use allvssingledefprem.png>
+Package pdftex.def Info: allvssingledefprem.png  used on input line 833.
+(pdftex.def)             Requested size: 578.18504pt x 289.09251pt.
+
+Overfull \hbox (108.43002pt too wide) in paragraph at lines 833--841
+[][]
+ []
+
+[22 <./allvssingledefprem.png>]
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
-[28] [29]
-Underfull \hbox (badness 10000) in paragraph at lines 1085--1086
+<VillaraelGetafeJM.png, id=309, 433.62pt x 433.62pt>
+File: VillaraelGetafeJM.png Graphic file (type png)
+<use VillaraelGetafeJM.png>
+Package pdftex.def Info: VillaraelGetafeJM.png  used on input line 920.
+(pdftex.def)             Requested size: 433.63878pt x 433.63878pt.
+[23]
+Overfull \vbox (11.50873pt too high) has occurred while \output is active []
+
+[24 <./VillaraelGetafeJM.png>] [25] [26] [27] [28]
+<LaligaTTplot.png, id=352, 433.62pt x 433.62pt>
+File: LaligaTTplot.png Graphic file (type png)
+<use LaligaTTplot.png>
+Package pdftex.def Info: LaligaTTplot.png  used on input line 1103.
+(pdftex.def)             Requested size: 433.63878pt x 433.63878pt.
+[29] [30 <./LaligaTTplot.png>]
+
+LaTeX Warning: `!h' float specifier changed to `!ht'.
+
+[31] [32] [33]
+Underfull \hbox (badness 10000) in paragraph at lines 1303--1304
 [][]$\T1/lmr/m/n/10 https : / / www . theguardian . com / football / 2021 / apr / 20 / uk -[] government -[] may -[] legislate -[] to -[] stop -[] european -[]
  []
 
 
-Overfull \hbox (391.57617pt too wide) in paragraph at lines 1087--1088
+Overfull \hbox (391.57617pt too wide) in paragraph at lines 1305--1306
 []\T1/lmr/m/n/10 [[]$https : / / www . statista . com / statistics / 1230111 / european -[] super -[] league -[] sponsorship -[] revenue / #$[]:~:text=Early%20reports%20suggested%20that%20media,euros%20annually%20from%20these%20deals] 
  []
 
-[30] [31] (./DissertationWriteUpV1.aux)
+[34] [35] (./DissertationWriteUpV1.aux)
+
+LaTeX Warning: There were multiply-defined labels.
+
 Package rerunfilecheck Info: File `DissertationWriteUpV1.out' has not changed.
-(rerunfilecheck)             Checksum: 15739A59CF9DC80414E6B7B88451E15A;3109.
+(rerunfilecheck)             Checksum: B0139DBBA0278E7F8C53C509AB29D76F;4235.
  ) 
 Here is how much of TeX's memory you used:
- 12958 strings out of 477961
- 205857 string characters out of 5837168
+ 13050 strings out of 477961
+ 207436 string characters out of 5837168
  1876074 words of memory out of 5000000
- 32826 multiletter control sequences out of 15000+600000
+ 32860 multiletter control sequences out of 15000+600000
  564335 words of font info for 75 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,10n,76p,409b,584s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,10n,76p,409b,548s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmex10.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi5.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi7.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr7.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtt10.pfb></Users/idrishedayat/Library/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb>
-Output written on DissertationWriteUpV1.pdf (31 pages, 1414535 bytes).
+Output written on DissertationWriteUpV1.pdf (35 pages, 1503245 bytes).
 PDF statistics:
- 415 PDF objects out of 1000 (max. 8388607)
- 341 compressed objects within 4 object streams
- 96 named destinations out of 1000 (max. 500000)
- 225 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 522 PDF objects out of 1000 (max. 8388607)
+ 443 compressed objects within 5 object streams
+ 154 named destinations out of 1000 (max. 500000)
+ 273 words of extra memory for PDF output out of 10000 (max. 10000000)
 

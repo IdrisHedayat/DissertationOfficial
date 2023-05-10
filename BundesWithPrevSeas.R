@@ -106,6 +106,12 @@ summary(MallBuli)
 
 allbulidef = t5team_strength(MallBuli,AllBuli) +ylab("Teams")
 ggsave("allbulidef.png", allbulidef, width = 8, height = 4, dpi = 300)
+
+##### comparing MPO vs mean outcomes:
+
+
+### Model Validation ####
+
 ##### WAIC COMBOS #####
 
 library(gtools)
@@ -243,7 +249,7 @@ saveRDS(top_10_models,"allbuli_top_10_models.rds")
 ##### Set seed ######
 set.seed(12345)
 
-##### introducing baseline and optimal formula based on waic value list #####
+#####  baseline and optimal formula based on waic value list #####
 
 BaselineForm =  Goal ~ Home + 
   f(factor(Team), model = "iid") +
@@ -656,4 +662,105 @@ cat("Mean squared error for the optimized model:", sum_sq_diff_optimized/20, "\n
 
 
 ###### IT WORKSSSSSS WE GOT BETTER MEAN SQARE ERROR FOR OPTIMISED MODEL !!!!! ########
+
+
+#### Final Predictions ####
+
+OpForm = Goal ~ Home + 
+  Gpg +
+  GCpg +
+  GDdiff +
+  f(factor(Team), model = "iid") +
+  f(factor(Opponent), model = "iid")  
+
+AllBulifinal = AllBuli
+
+MallBuli=inla(formula = OpForm,
+               data=AllBulifinal,
+               family="poisson",
+               control.predictor=list(compute=TRUE,link=1),
+               control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
+MallBulisum = summary(MallBuli)
+saveRDS(MallBulisum,"MallBulisumFinal.rds")
+
+Buli2223r22 = roundNinlampo(22,AllBulifinal, frm = OpForm) 
+Buli2223r23 = roundNinlampo(23,Buli2223r22$footieN, frm = OpForm) 
+Buli2223r24 = roundNinlampo(24,Buli2223r23$footieN, frm = OpForm) 
+Buli2223r25 = roundNinlampo(25,Buli2223r24$footieN, frm = OpForm) 
+Buli2223r26 = roundNinlampo(26,Buli2223r25$footieN,frm = OpForm) 
+Buli2223r27 = roundNinlampo(27,Buli2223r26$footieN,frm = OpForm) 
+Buli2223r28 = roundNinlampo(28,Buli2223r27$footieN,frm = OpForm) 
+Buli2223r29 = roundNinlampo(29,Buli2223r28$footieN,frm = OpForm) 
+Buli2223r30 = roundNinlampo(30,Buli2223r29$footieN,frm = OpForm) 
+Buli2223r31 = roundNinlampo(31,Buli2223r30$footieN,frm = OpForm) 
+Buli2223r32 = roundNinlampo(32,Buli2223r31$footieN,frm = OpForm) 
+Buli2223r33 = roundNinlampo(33,Buli2223r32$footieN,frm = OpForm) 
+Buli2223r34 = roundNinlampo(34,Buli2223r33$footieN,frm = OpForm) 
+
+
+Buli2223finaltab = Buli2223r34$footieN %>%
+  filter(season_id == 4) %>%
+  group_by(Team) %>%
+  summarize(total_points = sum(points_won)) %>%
+  arrange(desc(total_points)) %>%
+  ungroup()
+
+Buli2223finaltab
+saveRDS(Buli2223finaltab,"Buli2223TabWithSuperLeaguers")
+
+#### Final Predictions for league WITHUOT teams joining super league #####
+
+OpForm = Goal ~ Home + 
+  Gpg +
+  GCpg +
+  GDdiff +
+  f(factor(Team), model = "iid") +
+  f(factor(Opponent), model = "iid")    
+
+teams_to_remove_buli <- c("Bayern Munich","Dortmund")
+
+AllBulifinal2 = Buli2223r34$footieN %>%
+  filter(!(Team %in% teams_to_remove_buli | Opponent %in% teams_to_remove_buli))
+
+buli2223finaltab2 = AllBulifinal2 %>%
+  filter(season_id == 4) %>%
+  group_by(Team) %>%
+  summarize(total_points = sum(points_won)) %>%
+  arrange(desc(total_points))
+
+buli2223finaltab2
+saveRDS(buli2223finaltab2,"buli2223TabWithoutSuperLeaguers")
+
+# Mallbuli2=inla(formula = OpForm,
+#                data=AllBulifinal2,
+#                family="poisson",
+#                control.predictor=list(compute=TRUE,link=1),
+#                control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
+# Mallbulisum2 = summary(Mallbuli2)
+# saveRDS(Mallbulisum2,"MallbulisumFinal2.rds")
+# 
+# Buli2223r222 = roundNinlampo(22,AllBulifinal2, frm = OpForm) 
+# Buli2223r232 = roundNinlampo(23,Buli2223r222$footieN, frm = OpForm) 
+# Buli2223r242 = roundNinlampo(24,Buli2223r232$footieN, frm = OpForm) 
+# buli2223r252 = roundNinlampo(25,Buli2223r242$footieN, frm = OpForm) 
+# buli2223r262 = roundNinlampo(26,buli2223r252$footieN,frm = OpForm) 
+# buli2223r272 = roundNinlampo(27,buli2223r262$footieN,frm = OpForm) 
+# buli2223r282 = roundNinlampo(28,buli2223r272$footieN,frm = OpForm) 
+# buli2223r292 = roundNinlampo(29,buli2223r282$footieN,frm = OpForm) 
+# buli2223r302 = roundNinlampo(30,buli2223r292$footieN,frm = OpForm) 
+# buli2223r312 = roundNinlampo(31,buli2223r302$footieN,frm = OpForm) 
+# buli2223r322 = roundNinlampo(32,buli2223r312$footieN,frm = OpForm) 
+# buli2223r332 = roundNinlampo(33,buli2223r322$footieN,frm = OpForm) 
+# buli2223r342 = roundNinlampo(34,buli2223r332$footieN,frm = OpForm) 
+#  
+
+
+buli2223finaltab2 = Buli2223r342$footieN %>%
+  filter(season_id == 4) %>%
+  group_by(Team) %>%
+  summarize(total_points = sum(points_won)) %>%
+  arrange(desc(total_points))
+
+buli2223finaltab2
+saveRDS(buli2223finaltab2,"buli2223TabWithoutSuperLeaguers")
 

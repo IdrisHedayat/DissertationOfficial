@@ -380,15 +380,15 @@ saveRDS(bundesfootie,"BundesFootie2223.rds")
 
 ######### Formula ##############
 
-eq = Goal ~ Home + 
-  # diff_point +
-  # diff_rank +
-  # form +
-  # rel_strength +
-  # days_since_last +
-  # Gpg +
-  # GCpg +
-  # GDdiff +
+testeq = Goal ~ Home + 
+  diff_point +
+  diff_rank +
+  form +
+  rel_strength +
+  days_since_last +
+  Gpg +
+  GCpg +
+  GDdiff +
   f(factor(Team), model = "iid") +     # f() is used to define General Gasuain Model in INLA formula
   f(factor(Opponent), model = "iid")  
 # Time component wek by team to account for difference in time performance
@@ -424,7 +424,9 @@ mprem=inla(formula = eq,
              family="poisson",
              control.predictor=list(compute=TRUE,link=1),
              control.compute=list(config=TRUE,dic=TRUE))
-summary(mprem)
+mprem2223single = summary(mprem)
+saveRDS(mprem2223single,"mprem2223single.rds")
+
 t5team_strength(mprem,plfootie,"attack")  
 
 t5team_strength(mprem,plfootie,"defense")  
@@ -508,8 +510,8 @@ t5team_strength_table = function(m, pf) {
 dissolaligaattdef = t5team_strength_table(mlaliga,laligafootie)
 saveRDS(dissolaligaattdef, "dissolaligaattdef.RDS")
 # t5_timetrend now works below, but for some reason teams like real madrid, barca, atletico are decreasing over time ? maybe i have to run with a more full dataset i.e past seasons, or maybe i need to run at the end of this season i.e after gw38 ?
-time_trendt5time_trend(mlaliga,laligafootie)
-
+t5time_trend(mlaliga,laligafootie)
+t5time_trend(Malllaliga,Alllaliga)
 # Post-processing Used to predict the number of goals scored in.a new game
 
 # 
@@ -798,38 +800,15 @@ testscored1 = t5make_scored(23,laligadata,mlaliga,nsims=1000)
 mpotablexample = testscored1 %>% with(table(.[[5]],.[[6]])) %>% prop.table() %>%
   as_tibble(.name_repair = ~vctrs::vec_as_names(c("Cadiz","Rayo Vallecano","prop"),quiet=TRUE)) %>%
   mutate(across(where(is.character),as.numeric))
+seriedatatest = 
 
-
-# mpo_updated_unplayed = function(N,roundata, scored) {
-  
-  gwNuTEST = laligadata %>% filter(is.na(Goal) & (Round.Number == 23))
-  
-  # for(i in 1:nrow(gwNu)) {
-    # Extract the home and away teams for the i-th row
-    gwNteam = as.character(gwNuTEST[g, "Team"])
-    gwNopponent = as.character(gwNuTEST[g, "Opponent"])
-    
-    extractdataTEST = testscored1 %>% with(table(.[[gwNteam]],.[[gwNopponent]])) %>% prop.table() %>%
-     as_tibble(.name_repair = ~vctrs::vec_as_names(c(gwNteam,gwNopponent,"n"),quiet=TRUE)) 
-    #  mutate(across(where(is.character),as.numeric))
-    
-    max_row_index = which.max(extractdataTEST$n)
-    max_row = extractdataTEST[max_row_index, ]
-    
-    # Extract the predicted goals for the home and away teams from the most likely result "max_row"
-    team_goals = max_row[1]
-    # away_goals = max_row[2] turns out this not needed since we are doing specific team rows in order
-    as.
-    gwNuTEST$Goal[1] = as.numeric(team_goals)
-    view(gwNuTEST)
-    
-  # }
-  
-  return(gwNu %>% select(ID_game, Team, Goal, Opponent,num))
-# }
-
-    
-    
+mserie=inla(formula = eq,
+            data=seriedata,
+            family="poisson",
+            control.predictor=list(compute=TRUE,link=1),
+            control.compute=list(config=TRUE,dic=TRUE))
+mseriesum = summary(mserie)
+mseriesum
 ### example of most probable outcome table
 mpotablexample = mpotablexample %>% arrange(desc(prop))
 mpotablexample 
@@ -840,6 +819,23 @@ joint_marginal()
 ### example joint_marginal
 cadizvallecanojm = joint_marginal("Cádiz","Rayo Vallecano", testscored1)
 ggsave("CadizVallecanoJM.png",cadizvallecanojm, height = 6, width = 6)
+
+
+# serie a model sum
+
+seriedatatest = datprep(seriefootie,24)
+  
+mserie=inla(formula = testeq,
+              data=seriedatatest,
+              family="poisson",
+              control.predictor=list(compute=TRUE,link=1),
+              control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
+testmseriesum = summary(mserie)
+saveRDS(testmseriesum,"SerieATestSummary")
+
+
+
+
 
 
 

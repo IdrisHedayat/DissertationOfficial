@@ -172,15 +172,15 @@ joint_marginal=function(x,y,scored,result=NULL,...) {
           panel.background=element_blank(), 
           axis.text.x=element_blank(), axis.text.y=element_blank(),           
           axis.title.x=element_blank(), axis.title.y=element_blank())
-  hist_top=scored %>% ggplot(aes(as.factor(!!sym(x))))+geom_bar(aes(y = after_stat(count)/sum(after_stat(count))))+ylab("")+xlab("")
+  hist_top=scored %>% ggplot(aes(as.factor(!!sym(y))))+geom_bar(aes(y = after_stat(count)/sum(after_stat(count))))+ylab("")+xlab("")
   if(exists("max_goal",exArgs)){
     max_goal=exArgs$max_goal
     hist_top=hist_top+xlim(levels(as.factor(scored[[x]]))[1:(max_goal+1)])
   }
-  hist_side=scored %>% ggplot(aes(as.factor(!!sym(y))))+geom_bar(aes(y = after_stat(count)/sum(after_stat(count))))+ylab("")+xlab("")+coord_flip()
+  hist_side=scored %>% ggplot(aes(as.factor(!!sym(x))))+geom_bar(aes(y = after_stat(count)/sum(after_stat(count))))+ylab("")+xlab("")+coord_flip()
   if(exists("max_goal",exArgs)){
     max_goal=exArgs$max_goal
-    hist_side=hist_side+xlim(levels(as.factor(scored[[x]]))[1:(max_goal+1)])
+    hist_side=hist_side+xlim(levels(as.factor(scored[[y]]))[1:(max_goal+1)])
   }
   center=plot_joint(x,y,scored,result=result,...)
   
@@ -370,7 +370,7 @@ runINLA = function(formu,dat){
              data=dat,
              family="poisson",
              control.predictor=list(compute=TRUE,link=1),
-             control.compute=list(config=TRUE,dic=TRUE))
+             control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
   inmod
 }
 
@@ -528,7 +528,4 @@ t5tablerounrR = function(R,pf){
 
 
 
-
-
-######## if we are doing multple seasons ######
 

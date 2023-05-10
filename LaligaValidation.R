@@ -79,8 +79,8 @@ laligaallsched<- as_tibble(laliga_combined) %>%
 
 Alllaliga = MultiSznFootieMaker(laligaallsched)
 
-#### data starts at round 22
-AlllaligaData = datprep(Alllaliga,22)
+#### data starts at round 23
+AlllaligaData = datprep(Alllaliga,23)
 
 #### testing out alllaliga inla #####
 
@@ -208,7 +208,7 @@ saveRDS(top_10_models,"alllaliga_top_10_models.rds")
 ##### Set seed ######
 set.seed(12345)
 
-##### introducing baseline and optimal formula based on waic value list #####
+#####  baseline and optimal formula based on waic value list #####
 
 BaselineForm =  Goal ~ Home + 
   f(factor(Team), model = "iid") +
@@ -299,7 +299,7 @@ laligaallsched <- as_tibble(laliga_combined_val2122) %>%
 
 
 
-##### Alllaligaupto21/22 op vs baseline round by round ####
+##### All laliga up to 21/22 op vs baseline round by round ####
 
 Alllaliga2122_val = MultiSznFootieMaker(laligaallsched)
 
@@ -416,4 +416,169 @@ cat("Mean squared error for the optimized model:", sum_sq_diff_optimized/20, "\n
 
 
 ###### IT WORKSSSSSS WE GOT BETTER MEAN SQARE ERROR FOR OPTIMISED MODEL !!!!! ########
+
+
+#### plot for dissertation ####
+## example of simulation
+####  cadiz vs rayo vallecano
+
+set.seed(12345)
+testscored1 = t5make_scored(23,AlllaligaData,Malllaliga,nsims=1000)
+mpotablexample = testscored1 %>% with(table(.[[19]],.[[20]])) %>% prop.table() %>%
+  as_tibble(.name_repair = ~vctrs::vec_as_names(c("Villarreal","Getafe","prop"),quiet=TRUE)) %>%
+  mutate(across(where(is.character),as.numeric))
+
+### example of most probable outcome table
+mpotablexample = mpotablexample %>% arrange(desc(prop))
+mpotablexample 
+
+saveRDS(mpotablexample, "Villarael v Getafe Example MPO Table")
+
+### example joint_marginal
+villaraelgetafejm = joint_marginal("Villarreal","Getafe", testscored1)
+ggsave("VillaraelGetafeJM.png",villaraelgetafejm, height = 6, width = 6)
+
+
+hist_sidetest =testscored1 %>% ggplot(aes(as.factor(!!sym("Getafe"))))+geom_bar(aes(y = after_stat(count)/sum(after_stat(count))))+ylab("")+xlab("")+coord_flip()
+hist_sidetest
+
+
+##### testing time trend plot ####
+formularw2 = Goal ~ Home + 
+  # diff_rank +
+  # form +
+  # rel_strength +
+  # days_since_last +
+  # Gpg +
+  # GCpg +
+  # GDdiff +
+  f(factor(Team), model = "iid") +     # f() is used to define General Gasuain Model in INLA formula
+  f(factor(Opponent), model = "iid")  +
+# Time component wek by team to account for difference in time performance
+ f(id_date,model="rw2",replicate=as.numeric(factor(Team))) #+
+# Overdispersion to account for extra goals
+# f(num,model="iid") 
+
+TTalllaliga=inla(formula = formularw2,
+                data=AlllaligaData,
+                family="poisson",
+                control.predictor=list(compute=TRUE,link=1),
+                control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
+TTplot = t5time_trend(TTalllaliga,Alllaliga,date_start =  "2020-07-19", date_end =  "2023-05-23")
+ggsave("LaligaTTplot.png",TTplot, height = 6, width = 6)
+
+
+
+
+##### Final Modelling ####
+
+#### Final Predictions ####
+
+OpForm = Goal ~ Home + 
+  Gpg +
+  GCpg +
+  GDdiff +
+  f(factor(Team), model = "iid") +
+  f(factor(Opponent), model = "iid")  
+
+Alllaligafinal = Alllaliga
+
+Malllaliga=inla(formula = OpForm,
+               data=Alllaligafinal,
+               family="poisson",
+               control.predictor=list(compute=TRUE,link=1),
+               control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
+Malllaligasum = summary(Malllaliga)
+saveRDS(Malllaligasum,"MalllaligasumFinal.rds")
+
+
+laliga2223r23 = roundNinlampo(23,Alllaligafinal, frm = OpForm) 
+laliga2223r24 = roundNinlampo(24,laliga2223r23$footieN, frm = OpForm) 
+laliga2223r25 = roundNinlampo(25,laliga2223r24$footieN, frm = OpForm) 
+laliga2223r26 = roundNinlampo(26,laliga2223r25$footieN,frm = OpForm) 
+laliga2223r27 = roundNinlampo(27,laliga2223r26$footieN,frm = OpForm) 
+laliga2223r28 = roundNinlampo(28,laliga2223r27$footieN,frm = OpForm) 
+laliga2223r29 = roundNinlampo(29,laliga2223r28$footieN,frm = OpForm) 
+laliga2223r30 = roundNinlampo(30,laliga2223r29$footieN,frm = OpForm) 
+laliga2223r31 = roundNinlampo(31,laliga2223r30$footieN,frm = OpForm) 
+laliga2223r32 = roundNinlampo(32,laliga2223r31$footieN,frm = OpForm) 
+laliga2223r33 = roundNinlampo(33,laliga2223r32$footieN,frm = OpForm) 
+laliga2223r34 = roundNinlampo(34,laliga2223r33$footieN,frm = OpForm) 
+laliga2223r35 = roundNinlampo(35,laliga2223r34$footieN,frm = OpForm) 
+laliga2223r36 = roundNinlampo(36,laliga2223r35$footieN,frm = OpForm) 
+laliga2223r37 = roundNinlampo(37,laliga2223r36$footieN,frm = OpForm) 
+laliga2223r38 = roundNinlampo(38,laliga2223r37$footieN,frm = OpForm) 
+
+
+laliga2223finaltab = laliga2223r38$footieN %>%
+  filter(season_id == 4) %>%
+  group_by(Team) %>%
+  summarize(total_points = sum(points_won)) %>%
+  arrange(desc(total_points)) %>%
+  ungroup()
+
+laliga2223finaltab
+saveRDS(laliga2223finaltab,"laliga2223TabWithSuperLeaguers")
+
+
+#### Final Predictions for league WITHUOT teams joining super league #####
+
+OpForm = Goal ~ Home + 
+  Gpg +
+  GCpg +
+  GDdiff +
+  f(factor(Team), model = "iid") +
+  f(factor(Opponent), model = "iid")  
+
+teams_to_remove_laliga <- c("Barcelona", "Real Madrid", "Atlético Madrid")
+
+Alllaligafinal2 <- laliga2223r38$footieN  %>%
+  filter(!(Team %in% teams_to_remove_laliga | Opponent %in% teams_to_remove_laliga))
+
+laliga2223finaltab2 = Alllaligafinal2 %>%
+  filter(season_id == 4) %>%
+  group_by(Team) %>%
+  summarize(total_points = sum(points_won)) %>%
+  arrange(desc(total_points))
+
+laliga2223finaltab2
+saveRDS(laliga2223finaltab2,"laliga2223TabWithoutSuperLeaguers")
+
+
+
+
+# Malllaliga2=inla(formula = OpForm,
+#                data=Alllaligafinal2,
+#                family="poisson",
+#                control.predictor=list(compute=TRUE,link=1),
+#                control.compute=list(config=TRUE,dic=TRUE,waic=TRUE))
+# Malllaligasum2 = summary(Malllaliga2)
+# saveRDS(Malllaligasum2,"MalllaligasumFinal2.rds")
+# 
+# laliga2223r232 = roundNinlampo(23,Alllaligafinal2, frm = OpForm) 
+# laliga2223r242 = roundNinlampo(24,laliga2223r232$footieN, frm = OpForm) 
+# laliga2223r252 = roundNinlampo(25,laliga2223r242$footieN, frm = OpForm) 
+# laliga2223r262 = roundNinlampo(26,laliga2223r252$footieN,frm = OpForm) 
+# laliga2223r272 = roundNinlampo(27,laliga2223r262$footieN,frm = OpForm) 
+# laliga2223r282 = roundNinlampo(28,laliga2223r272$footieN,frm = OpForm) 
+# laliga2223r292 = roundNinlampo(29,laliga2223r282$footieN,frm = OpForm) 
+# laliga2223r302 = roundNinlampo(30,laliga2223r292$footieN,frm = OpForm) 
+# laliga2223r312 = roundNinlampo(31,laliga2223r302$footieN,frm = OpForm) 
+# laliga2223r322 = roundNinlampo(32,laliga2223r312$footieN,frm = OpForm) 
+# laliga2223r332 = roundNinlampo(33,laliga2223r322$footieN,frm = OpForm) 
+# laliga2223r342 = roundNinlampo(34,laliga2223r332$footieN,frm = OpForm) 
+# laliga2223r352 = roundNinlampo(35,laliga2223r342$footieN,frm = OpForm) 
+# laliga2223r362 = roundNinlampo(36,laliga2223r352$footieN,frm = OpForm) 
+# laliga2223r372 = roundNinlampo(37,laliga2223r362$footieN,frm = OpForm) 
+# laliga2223r382 = roundNinlampo(38,laliga2223r372$footieN,frm = OpForm) 
+# 
+# 
+# laliga2223finaltab2 = laliga2223r382$footieN %>%
+#   filter(season_id == 4) %>%
+#   group_by(Team) %>%
+#   summarize(total_points = sum(points_won)) %>%
+#   arrange(desc(total_points))
+# 
+# laliga2223finaltab2
+# saveRDS(laliga2223finaltab2,"laliga2223TabWithoutSuperLeaguers")
 
